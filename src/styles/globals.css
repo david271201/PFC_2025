@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: white;
+}
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* Estilos personalizados para os botões SweetAlert2 */
+.confirm-button-class {
+  background-color: #4caf50; /* Verde */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.cancel-button-class {
+  background-color: #f44336; /* Vermelho */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* Estilos adicionais para hover, focus, etc. */
+.confirm-button-class:hover,
+.confirm-button-class:focus {
+  background-color: #45a049;
+}
+
+.cancel-button-class:hover,
+.cancel-button-class:focus {
+  background-color: #e53935;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
