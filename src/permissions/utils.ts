@@ -32,6 +32,7 @@ export const statusTransitions: Record<
     nextStatus: RequestStatus;
     previousStatus: RequestStatus | null;
     requiredRole: Role;
+    onRejection?: RequestStatus; // Adiciona a opção de rejeição
   } | null
 > = {
   [RequestStatus.AGUARDANDO_CHEFE_FUSEX_1]: {
@@ -108,6 +109,7 @@ export const statusTransitions: Record<
     nextStatus: RequestStatus.AGUARDANDO_PASSAGEM,
     previousStatus: RequestStatus.AGUARDANDO_HOMOLOGADOR_SOLICITADA_2,
     requiredRole: Role.CHEFE_FUSEX,
+    //onRejection: RequestStatus.DEVOLVIDO_PARA_CORRECAO, // Adiciona a opção de devolução
   },
   [RequestStatus.AGUARDANDO_PASSAGEM]: {
     nextStatus: RequestStatus.AGUARDANDO_CHEFE_FUSEX_4,
@@ -183,4 +185,9 @@ export const statusTransitions: Record<
     requiredRole: Role.HOMOLOGADOR,
   },
   [RequestStatus.CANCELADO]: null,
+  //[RequestStatus.DEVOLVIDO_PARA_CORRECAO]: {
+  //  nextStatus: RequestStatus.AGUARDANDO_CHEFE_FUSEX_3,
+  //  previousStatus: RequestStatus.AGUARDANDO_CHEFE_FUSEX_3,
+  //  requiredRole: Role.OPERADOR_FUSEX,
+  //},
 };

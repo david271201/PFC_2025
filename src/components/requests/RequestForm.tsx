@@ -1,4 +1,3 @@
-/* eslint-disable jsx-a11y/control-has-associated-label */
 import { TRequestResponseWithReceiver } from '@/common-types';
 import { RequestStatus, Role } from '@prisma/client';
 import { useEffect, useState } from 'react';
@@ -84,8 +83,10 @@ export default function RequestForm({
             (response) =>
               !(
                 [
-                  RequestStatus.CANCELADO,
                   RequestStatus.REPROVADO,
+                  RequestStatus.REPROVADO_DSAU,
+                  RequestStatus.CANCELADO,
+                  RequestStatus.APROVADO,
                 ] as RequestStatus[]
               ).includes(response.status),
           )
@@ -96,18 +97,6 @@ export default function RequestForm({
       });
     }
   }, [responses, reset]);
-
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const { value, name } = e.target;
-    setValue(name as keyof OpinionFormDataType, value);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newFilesArray = Array.from(e.target.files);
-      setSelectedFiles([...selectedFiles, ...newFilesArray]);
-    }
-  };
 
   const handleRemoveFile = (file: File) => {
     setSelectedFiles(selectedFiles.filter((f) => f.name !== file.name));
@@ -157,11 +146,7 @@ export default function RequestForm({
     );
 
     const response = await fetch(`/api/requests/${requestId}/status`, {
-      // verifica se é escolha da OMS ou não
-      method:
-        status !== RequestStatus.AGUARDANDO_HOMOLOGADOR_SOLICITANTE_3
-          ? 'PATCH'
-          : 'PUT',
+      method: 'PATCH',
       body: formData,
     });
 
@@ -172,6 +157,31 @@ export default function RequestForm({
         title: 'Erro',
         icon: 'error',
         text: 'Ocorreu um erro ao enviar o parecer',
+        customClass: {
+          confirmButton:
+            'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+        },
+      });
+    }
+  };
+
+  const submitCorrection = async (data: OpinionFormDataType) => {
+    const formData = new FormData();
+    formData.append('favorable', 'false');
+    formData.append('observation', data.observation || '');
+
+    const response = await fetch(`/api/requests/${requestId}/status`, {
+      method: 'PATCH',
+      body: formData,
+    });
+
+    if (response.ok) {
+      router.push('/solicitacoes');
+    } else {
+      Swal.fire({
+        title: 'Erro',
+        icon: 'error',
+        text: 'Ocorreu um erro ao devolver para correção',
         customClass: {
           confirmButton:
             'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
@@ -200,143 +210,18 @@ export default function RequestForm({
     }
   };
 
-  const handleCancelRequest = async (observation: string) => {
-    const response = await fetch(`/api/requests/${requestId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ observation }),
-    });
-
-    if (response.ok) {
-      modal({
-        title: 'Sucesso',
-        text: 'Solicitação cancelada com sucesso',
-        icon: 'success',
-        showCancelButton: false,
-        onConfirm: () => {
-          router.push('/solicitacoes');
-        },
-      });
-    } else {
-      modal({
-        title: 'Erro',
-        text: 'Ocorreu um erro ao cancelar a solicitação',
-        icon: 'error',
-        showCancelButton: false,
-      });
-    }
-  };
-
-  const confirmCancelRequest = () => {
+  const confirmCorrection = (data: OpinionFormDataType) => {
     modal({
-      text: 'Qual a justificativa para cancelar a solicitação?',
-      input: 'text',
-      preConfirm: (observation: string) => handleCancelRequest(observation),
-      showLoaderOnConfirm: true,
+      title: 'Devolver para correção',
+      text: 'Deseja devolver este pedido para correção?',
+      icon: 'warning',
+      onConfirm: () => submitCorrection(data),
     });
   };
 
-  if (status === RequestStatus.AGUARDANDO_PASSAGEM && responses) {
-    return (
-      <form
-        onSubmit={handleSubmit(submitConfirmation)}
-        className="flex w-full flex-col gap-2"
-      >
-        <h2 className="w-full border-b-2 border-cinzaClaro text-xl font-bold text-grafite">
-          Orçamento de passagens
-        </h2>
-        {fields.map((field, index) => (
-          <div
-            key={field.id}
-            className="flex w-full flex-col justify-center gap-2 rounded-lg border-2 border-cinzaClaro bg-white p-2"
-          >
-            <div className="flex gap-4">
-              <span className="font-medium text-grafite">
-                {responses[index].receiver.name}:
-              </span>
-              <Controller
-                name={`ticketCosts.${index}.cost` as const}
-                control={control}
-                rules={{ required: true }}
-                defaultValue={0}
-                render={({ field: f }) => (
-                  <Input
-                    type="text"
-                    value={formatCurrency(f.value || 0)}
-                    onChange={(e) =>
-                      handleCurrencyChange(e.target.value, f.onChange)
-                    }
-                  />
-                )}
-              />
-            </div>
-          </div>
-        ))}
-        <Button type="submit" className="mt-3 max-w-40">
-          Enviar orçamento
-        </Button>
-      </form>
-    );
-  }
-
-  if (
-    status === RequestStatus.AGUARDANDO_HOMOLOGADOR_SOLICITANTE_3 &&
-    responses
-  ) {
-    const options = responses
-      .filter((response) => response.status === RequestStatus.APROVADO)
-      .map((response) => ({
-        value: response.id,
-        label: response.receiver.name,
-      }));
-
-    return (
-      <form
-        onSubmit={handleSubmit(submitConfirmation)}
-        className="flex w-full flex-col gap-2"
-      >
-        <h2 className="w-full border-b-2 border-cinzaClaro text-xl font-bold text-grafite">
-          Escolher OMS para evacuação
-        </h2>
-        <Card>
-          <div className="flex w-full flex-col gap-2">
-            <Select
-              label="Para qual OMS deseja evacuar?"
-              options={options}
-              divClassname="whitespace-nowrap w-fit"
-              {...register('selectedResponseId', {
-                required: true,
-              })}
-            />
-            <div className="flex flex-col gap-1">
-              <span className="font-medium text-grafite">Justificativa</span>
-              <textarea
-                placeholder="Digite sua observação aqui..."
-                rows={3}
-                className="w-full rounded border border-gray-300 px-2 text-grafite focus:outline-0 focus:ring focus:ring-verde"
-                {...register('observation')}
-              />
-            </div>
-          </div>
-        </Card>
-        <div className="mt-3 flex items-center gap-4">
-          <Button type="submit" className="max-w-40">
-            Enviar escolha
-          </Button>
-          {userRole === Role.HOMOLOGADOR && (
-            <Button
-              color="danger"
-              onClick={confirmCancelRequest}
-              className="w-fit"
-            >
-              Cancelar solicitação
-            </Button>
-          )}
-        </div>
-      </form>
-    );
+  function handleSelectChange(e: any): void {
+    const value = e.target.value === 'true';
+    setValue('favorable', value);
   }
 
   return (
@@ -370,64 +255,24 @@ export default function RequestForm({
                   {...register('observation')}
                 />
               </div>
-              <div className="flex flex-col items-start gap-1">
-                <span className="font-medium text-grafite">Anexos</span>
-                <div className="flex items-center gap-2">
-                  {selectedFiles.map((file) => (
-                    <div
-                      key={file.name}
-                      className="relative flex flex-col items-center justify-center rounded-md border border-dashed border-gray-400 bg-cinzaClaro/50 p-4"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFile(file)}
-                        className="absolute right-2 top-2"
-                      >
-                        <XMarkIcon className="size-4 stroke-gray-600" />
-                      </button>
-                      <DocumentIcon className="size-6 w-full stroke-gray-400" />
-                      <span className="text-sm font-medium text-grafite">
-                        {file.name}
-                      </span>
-                    </div>
-                  ))}
-                  <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-gray-400 bg-cinzaClaro/50 p-4">
-                    <ArrowUpTrayIcon className="size-6 w-full stroke-gray-400" />
-                    <label htmlFor="file-upload" className="cursor-pointer">
-                      <span className="text-sm font-medium text-blue-500">
-                        Adicionar arquivo
-                      </span>
-                      <input
-                        id="file-upload"
-                        type="file"
-                        className="sr-only"
-                        onChange={handleFileChange}
-                        multiple
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
             </div>
           </Card>
+          <div className="mt-3 flex items-center gap-4">
+            <Button type="submit" className="max-w-40">
+              Enviar escolha
+            </Button>
+            {userRole === Role.CHEFE_FUSEX && (
+              <Button
+                color="danger"
+                onClick={handleSubmit(confirmCorrection)}
+                className="w-fit"
+              >
+                Devolver para correção
+              </Button>
+            )}
+          </div>
         </>
       )}
-      <div className="mt-3 flex items-center gap-4">
-        {!(status === RequestStatus.AGUARDANDO_RESPOSTA && !responses) && (
-          <Button type="submit" className="max-w-40">
-            Enviar
-          </Button>
-        )}
-        {userRole === Role.HOMOLOGADOR && (
-          <Button
-            color="danger"
-            onClick={confirmCancelRequest}
-            className="w-fit"
-          >
-            Cancelar solicitação
-          </Button>
-        )}
-      </div>
     </form>
   );
 }

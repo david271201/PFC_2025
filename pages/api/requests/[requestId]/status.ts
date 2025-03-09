@@ -126,46 +126,6 @@ export default async function handle(
     return { ...acc, [key]: value[0] };
   }, {} as any);
 
-  // seleção da OMS para evacuar
-  if (req.method === 'PUT') {
-    if (!checkPermission(role, 'responses:select')) {
-      return res.status(403).json({ message: 'Usuário não autorizado' });
-    }
-
-    const { observation, selectedResponseId } = formattedFields;
-
-    await prisma.$transaction([
-      prisma.actionLog.create(
-        logAction(
-          userId,
-          requestId as string,
-          ActionType.ESCOLHA_OMS,
-          observation,
-        ),
-      ),
-      prisma.request.update({
-        where: {
-          id: requestId as string,
-        },
-        data: {
-          status: nextStatus,
-        },
-      }),
-      prisma.requestResponse.update({
-        where: {
-          id: selectedResponseId as string,
-        },
-        data: {
-          selected: true,
-          // não deve atualizar a data
-          updatedAt: undefined,
-        },
-      }),
-    ]);
-
-    return res.status(200).json(undefined);
-  }
-
   if (req.method === 'PATCH') {
     if (!checkPermission(role, 'requests:update')) {
       return res.status(403).json({ message: 'Usuário não autorizado' });
@@ -222,7 +182,7 @@ export default async function handle(
                   id: requestId as string,
                 },
                 data: {
-                  status: RequestStatus.REPROVADO,
+                  status: RequestStatus.NECESSITA_CORRECAO,
                 },
               }),
             ];
@@ -286,51 +246,6 @@ export default async function handle(
             createRequestResponse(tx, {
               requestId: requestId as string,
               receiverId,
-            }),
-        );
-        await Promise.all(responsePromises);
-      }
-
-      if (cancelUnfinishedResponses) {
-        const unfinishedResponseIds = request.requestResponses
-          .filter((response) => !terminalStatuses.includes(response.status))
-          .map((response) => response.id);
-
-        await tx.requestResponse.updateMany({
-          where: {
-            id: {
-              in: unfinishedResponseIds,
-            },
-          },
-          data: {
-            status: RequestStatus.CANCELADO,
-          },
-        });
-      }
-
-      if (request.status === RequestStatus.AGUARDANDO_PASSAGEM) {
-        const responsePromises = ticketCosts.map(
-          (ticket: { responseId: string; cost: number }) =>
-            tx.requestResponse.update({
-              where: {
-                id: ticket.responseId,
-              },
-              data: {
-                ticketCost: ticket.cost,
-                actions: {
-                  create: {
-                    user: { connect: { id: userId } },
-                    action: ActionType.ORCAMENTO,
-                    files:
-                      files.files && files.files.length > 0
-                        ? files.files.map(
-                            (file) =>
-                              `/public/arquivos/${requestId}/${file.originalFilename}`,
-                          )
-                        : undefined,
-                  },
-                },
-              },
             }),
         );
         await Promise.all(responsePromises);

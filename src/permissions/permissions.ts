@@ -15,6 +15,7 @@ export const permissions = [
   'stats:read', // Leitura de estatísticas
   /* PERMISSOES PARA USUÁRIOS */
   'users:read', // Leitura de usuários
+  'responses:update', // ediçao de respostas
 ] as const;
 
 export type Permission = (typeof permissions)[number];
