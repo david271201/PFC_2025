@@ -1,36 +1,36 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
-import { Controller, useForm } from 'react-hook-form';
-import { useState } from 'react';
-import { Request, Pacient } from '@prisma/client';
-import Swal from 'sweetalert2';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'next/router';
-import ReactSelect from 'react-select';
-import fetcher from '@/fetcher';
-import useSWR from 'swr';
-import { cbhpmInfo } from '@/data/cbhpm/codes';
-import AsyncSelect from 'react-select/async';
-import { debounce } from 'lodash';
+import { Controller, useForm } from "react-hook-form";
+import { useMemo, useState } from "react";
+import { Request, Pacient, RequestStatus } from "@prisma/client";
+import Swal from "sweetalert2";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/router";
+import ReactSelect from "react-select";
+import fetcher from "@/fetcher";
+import useSWR from "swr";
+import { cbhpmInfo } from "@/data/cbhpm/codes";
+import AsyncSelect from "react-select/async";
+import { debounce } from "lodash";
 import {
   ArrowUpTrayIcon,
   DocumentIcon,
   XMarkIcon,
-} from '@heroicons/react/24/outline';
-import Button from '../common/button';
-import Input, { formatCurrency } from '../common/input';
-import SpinLoading from '../common/loading/SpinLoading';
-import Select from '../common/select';
-import modal from '../common/modal';
+} from "@heroicons/react/24/outline";
+import Button from "../common/button";
+import Input, { formatCurrency } from "../common/input";
+import SpinLoading from "../common/loading/SpinLoading";
+import Select from "../common/select";
+import modal from "../common/modal";
 
-export const transformToBoolean = (value: string) => value === 'true';
+export const transformToBoolean = (value: string) => value === "true";
 
 const normalizeString = (text: string) =>
   text
     .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9 ]/g, '');
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9 ]/g, "");
 
 const requestFormSchema = z.object({
   precCp: z.string(),
@@ -51,7 +51,7 @@ const requestFormSchema = z.object({
       z.object({
         value: z.string(),
         label: z.string(),
-      }),
+      })
     )
     .nonempty(),
 });
@@ -72,16 +72,21 @@ export default function RequestInfo({
     }[];
   };
 }) {
+  const isInputDisabled = useMemo(
+    () => !(request?.status === RequestStatus.NECESSITA_CORRECAO),
+    [request]
+  );
+
   const { register, setValue, handleSubmit, control } =
     useForm<RequestFormDataType>(
       request
         ? {
             resolver: zodResolver(requestFormSchema),
-            disabled: true,
+            disabled: isInputDisabled,
             defaultValues: {
               ...request.pacient,
               cbhpmCode: cbhpmInfo.find(
-                (cbhpm) => cbhpm.id === request.cbhpmCode,
+                (cbhpm) => cbhpm.id === request.cbhpmCode
               ),
               needsCompanion: request.needsCompanion,
               opmeCost: request.opmeCost,
@@ -90,13 +95,13 @@ export default function RequestInfo({
                 (org) => ({
                   value: org.id,
                   label: org.name,
-                }),
+                })
               ),
             },
           }
         : {
             resolver: zodResolver(requestFormSchema),
-          },
+          }
     );
 
   const router = useRouter();
@@ -109,7 +114,7 @@ export default function RequestInfo({
       id: string;
       name: string;
     }[]
-  >(!request ? '/api/organizations' : null, fetcher, {
+  >(!request ? "/api/organizations" : null, fetcher, {
     revalidateOnFocus: false,
   });
 
@@ -125,13 +130,13 @@ export default function RequestInfo({
 
   const loadCbhpmOptions = debounce((inputValue, callback) => {
     const filteredOptions = cbhpmOptions.filter((option) =>
-      normalizeString(option.label).includes(normalizeString(inputValue)),
+      normalizeString(option.label).includes(normalizeString(inputValue))
     );
     callback(
       filteredOptions.map((option) => ({
         value: option.value,
         label: option.label,
-      })),
+      }))
     );
   }, 500);
 
@@ -164,14 +169,14 @@ export default function RequestInfo({
 
     if (!pacient) return;
 
-    setValue('precCp', pacient.precCp);
-    setValue('name', pacient.name);
-    setValue('rank', pacient.rank);
-    setValue('isDependent', pacient.isDependent);
+    setValue("precCp", pacient.precCp);
+    setValue("name", pacient.name);
+    setValue("rank", pacient.rank);
+    setValue("isDependent", pacient.isDependent);
   };
 
   const handleCurrencyChange = (value: string, fieldOnChange: any) => {
-    const intValue = parseInt(value.replace(/\D/g, ''), 10);
+    const intValue = parseInt(value.replace(/\D/g, ""), 10);
     fieldOnChange(intValue);
   };
 
@@ -179,44 +184,44 @@ export default function RequestInfo({
     const formData = new FormData();
     Object.entries({ ...data, files: selectedFiles }).forEach(
       ([key, value]) => {
-        if (key === 'files') {
+        if (key === "files") {
           (value as File[]).forEach((file) => {
-            formData.append('files', file);
+            formData.append("files", file);
           });
-        } else if (key === 'requestedOrganizations') {
+        } else if (key === "requestedOrganizations") {
           formData.append(
-            'requestedOrganizationIds[]',
+            "requestedOrganizationIds[]",
             JSON.stringify(
               (value as { value: string; label: string }[]).map(
-                (org) => org.value,
-              ),
-            ),
+                (org) => org.value
+              )
+            )
           );
-        } else if (key === 'cbhpmCode') {
-          formData.append('cbhpmCode', (value as { id: string }).id);
-        } else if (typeof value === 'boolean' || typeof value === 'number') {
+        } else if (key === "cbhpmCode") {
+          formData.append("cbhpmCode", (value as { id: string }).id);
+        } else if (typeof value === "boolean" || typeof value === "number") {
           formData.append(key, value.toString());
         } else {
           formData.append(key, value as string);
         }
-      },
+      }
     );
 
-    const response = await fetch('/api/requests', {
-      method: 'POST',
+    const response = await fetch("/api/requests", {
+      method: "POST",
       body: formData,
     });
 
     if (response.ok) {
-      router.push('/solicitacoes');
+      router.push("/solicitacoes");
     } else {
       Swal.fire({
-        title: 'Erro',
-        text: 'Ocorreu um erro ao enviar a solicitação',
-        icon: 'error',
+        title: "Erro",
+        text: "Ocorreu um erro ao enviar a solicitação",
+        icon: "error",
         customClass: {
           confirmButton:
-            'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+            "bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro",
         },
       });
     }
@@ -236,7 +241,7 @@ export default function RequestInfo({
       <div className="relative col-span-1">
         <Input
           label="CPF"
-          {...register('cpf', {
+          {...register("cpf", {
             required: true,
             minLength: 11,
             maxLength: 11,
@@ -245,7 +250,7 @@ export default function RequestInfo({
           })}
         />
         <div
-          className={`absolute ${isSearchingPacient ? 'block' : 'hidden'} bottom-1 right-1`}
+          className={`absolute ${isSearchingPacient ? "block" : "hidden"} bottom-1 right-1`}
         >
           <SpinLoading />
         </div>
@@ -253,7 +258,7 @@ export default function RequestInfo({
       <Input
         label="Prec-CP"
         divClassname="col-span-1"
-        {...register('precCp', {
+        {...register("precCp", {
           required: true,
           disabled: isSearchingPacient,
         })}
@@ -261,7 +266,7 @@ export default function RequestInfo({
       <Input
         label="Nome"
         divClassname="col-span-3 row-start-2"
-        {...register('name', {
+        {...register("name", {
           required: true,
           disabled: isSearchingPacient,
         })}
@@ -269,7 +274,7 @@ export default function RequestInfo({
       <Input
         label="Posto/Graduação"
         divClassname="col-span-2 row-start-2"
-        {...register('rank', {
+        {...register("rank", {
           required: true,
           disabled: isSearchingPacient,
         })}
@@ -277,11 +282,11 @@ export default function RequestInfo({
       <Select
         label="Dependente?"
         options={[
-          { label: 'Não', value: 'false' },
-          { label: 'Sim', value: 'true' },
+          { label: "Não", value: "false" },
+          { label: "Sim", value: "true" },
         ]}
         divClassname="row-start-2"
-        {...register('isDependent', {
+        {...register("isDependent", {
           onChange: (e) => handleSelectChange(e),
           disabled: isSearchingPacient,
         })}
@@ -307,10 +312,10 @@ export default function RequestInfo({
               }
               onChange={(value) =>
                 field.onChange(
-                  cbhpmInfo.find((cbhpm) => cbhpm.id === value?.value),
+                  cbhpmInfo.find((cbhpm) => cbhpm.id === value?.value)
                 )
               }
-              isDisabled={!!request}
+              isDisabled={isInputDisabled}
             />
           )}
         />
@@ -318,11 +323,11 @@ export default function RequestInfo({
       <Select
         label="Necessita acompanhante?"
         options={[
-          { label: 'Não', value: 'false' },
-          { label: 'Sim', value: 'true' },
+          { label: "Não", value: "false" },
+          { label: "Sim", value: "true" },
         ]}
         divClassname="row-start-3 whitespace-nowrap"
-        {...register('needsCompanion', {
+        {...register("needsCompanion", {
           onChange: (e) => handleSelectChange(e),
         })}
       />
@@ -340,7 +345,7 @@ export default function RequestInfo({
             onChange={(e) =>
               handleCurrencyChange(e.target.value, field.onChange)
             }
-            disabled={!!request}
+            disabled={isInputDisabled}
           />
         )}
       />
@@ -358,11 +363,11 @@ export default function RequestInfo({
             onChange={(e) =>
               handleCurrencyChange(e.target.value, field.onChange)
             }
-            disabled={!!request}
+            disabled={isInputDisabled}
           />
         )}
       />
-      {!router.pathname.includes('recebidas') && (
+      {!router.pathname.includes("recebidas") && (
         <div className="col-span-2 row-start-5 flex flex-col gap-1">
           <span className="font-semibold text-grafite">OMS de referência</span>
           <Controller
@@ -375,7 +380,7 @@ export default function RequestInfo({
                 value={field.value}
                 options={organizationOptions}
                 onChange={(value) => field.onChange(value)}
-                isDisabled={!!request}
+                isDisabled={isInputDisabled}
               />
             )}
           />
@@ -425,6 +430,11 @@ export default function RequestInfo({
             Enviar
           </Button>
         </>
+      )}
+      {request && request.status === RequestStatus.NECESSITA_CORRECAO && (
+        <Button type="submit" className="row-start-7">
+          Corrigir
+        </Button>
       )}
     </form>
   );

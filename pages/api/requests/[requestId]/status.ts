@@ -1,17 +1,17 @@
-import logAction from '@/log-action';
+import logAction from "@/log-action";
 import {
   checkPermission,
   statusTransitions,
   terminalStatuses,
   UserType,
-} from '@/permissions/utils';
-import { auth } from '@@/auth';
-import prisma from '@@/prisma/prismaClient';
-import { ActionType, RequestStatus, Role, Prisma } from '@prisma/client';
-import formidable from 'formidable';
-import { NextApiRequest, NextApiResponse } from 'next';
-import path from 'path';
-import fs from 'fs';
+} from "@/permissions/utils";
+import { auth } from "@@/auth";
+import prisma from "@@/prisma/prismaClient";
+import { ActionType, RequestStatus, Role, Prisma } from "@prisma/client";
+import formidable from "formidable";
+import { NextApiRequest, NextApiResponse } from "next";
+import path from "path";
+import fs from "fs";
 
 type CreateRequestResponseInput = {
   requestId: string;
@@ -20,7 +20,7 @@ type CreateRequestResponseInput = {
 
 async function createRequestResponse(
   tx: Prisma.TransactionClient,
-  data: CreateRequestResponseInput,
+  data: CreateRequestResponseInput
 ) {
   const { requestId, receiverId } = data;
   return tx.requestResponse.create({
@@ -37,7 +37,7 @@ async function createRequestResponse(
 
 function getNextStatus(currentStatus: RequestStatus, userRole: Role) {
   if (!statusTransitions[currentStatus]) {
-    return 'unauthorized';
+    return "unauthorized";
   }
 
   const { nextStatus, requiredRole } = statusTransitions[currentStatus] as {
@@ -47,7 +47,7 @@ function getNextStatus(currentStatus: RequestStatus, userRole: Role) {
   };
 
   if (requiredRole !== userRole) {
-    return 'unauthorized';
+    return "unauthorized";
   }
 
   return nextStatus;
@@ -55,14 +55,14 @@ function getNextStatus(currentStatus: RequestStatus, userRole: Role) {
 
 export default async function handle(
   req: NextApiRequest,
-  res: NextApiResponse,
+  res: NextApiResponse
 ) {
   const session = await auth(req, res);
   const { userId, role } = session?.user as UserType;
   const { requestId } = req.query;
 
   if (!session?.user || !role) {
-    return res.status(401).json({ message: 'Usuário não autenticado' });
+    return res.status(401).json({ message: "Usuário não autenticado" });
   }
 
   const request = await prisma.request.findUnique({
@@ -89,16 +89,16 @@ export default async function handle(
   });
 
   if (!request) {
-    return res.status(404).json({ message: 'Solicitação não encontrada' });
+    return res.status(404).json({ message: "Solicitação não encontrada" });
   }
 
-  let nextStatus: RequestStatus | 'unauthorized' = getNextStatus(
+  let nextStatus: RequestStatus | "unauthorized" = getNextStatus(
     request.status,
-    role,
+    role
   );
 
-  if (nextStatus === 'unauthorized') {
-    return res.status(403).json({ message: 'Usuário não autorizado' });
+  if (nextStatus === "unauthorized") {
+    return res.status(403).json({ message: "Usuário não autorizado" });
   }
 
   const formData = formidable({ multiples: true });
@@ -108,35 +108,40 @@ export default async function handle(
       return acc;
     }
 
-    if (key.includes('[]')) {
-      const formattedKey = key.replace('[]', '');
+    if (key.includes("[]")) {
+      const formattedKey = key.replace("[]", "");
       return {
         ...acc,
         [formattedKey]: JSON.parse(value[0]),
       };
     }
 
-    if (value[0] === 'true' || value[0] === 'false') {
+    if (value[0] === "true" || value[0] === "false") {
       return {
         ...acc,
-        [key]: value[0] === 'true',
+        [key]: value[0] === "true",
       };
     }
 
     return { ...acc, [key]: value[0] };
   }, {} as any);
 
-  if (req.method === 'PATCH') {
-    if (!checkPermission(role, 'requests:update')) {
-      return res.status(403).json({ message: 'Usuário não autorizado' });
+  if (req.method === "PATCH") {
+    if (!checkPermission(role, "requests:update")) {
+      return res.status(403).json({ message: "Usuário não autorizado" });
     }
-    const { favorable, observation, ticketCosts, cancelUnfinishedResponses } =
-      formattedFields;
+    const {
+      favorable,
+      correction = false,
+      observation,
+      ticketCosts,
+      cancelUnfinishedResponses,
+    } = formattedFields;
 
     if (files.files && files.files.length > 0) {
       const uploadDir = path.join(
         process.cwd(),
-        `/public/arquivos/${requestId}`,
+        `/public/arquivos/${requestId}`
       );
 
       files.files.forEach((file) => {
@@ -149,43 +154,42 @@ export default async function handle(
       });
     }
 
+    if (correction) {
+      await prisma.request.update({
+        where: {
+          id: requestId as string,
+        },
+        data: {
+          status: RequestStatus.NECESSITA_CORRECAO,
+        },
+      });
+      return res.status(200).json(undefined);
+    }
+
     if (!favorable) {
-      const promises =
-        role === Role.SUBDIRETOR_SAUDE || role === Role.DRAS
-          ? [
-              prisma.requestResponse.update({
-                where: {
-                  id: request.requestResponses.find(
-                    (response) => response.selected,
-                  )?.id,
-                },
-                data: {
-                  selected: false,
-                  status: RequestStatus.REPROVADO_DSAU,
-                },
-              }),
-              prisma.request.update({
-                where: {
-                  id: requestId as string,
-                },
-                data: {
-                  status: getNextStatus(
-                    RequestStatus.REPROVADO_DSAU,
-                    role,
-                  ) as RequestStatus,
-                },
-              }),
-            ]
-          : [
-              prisma.request.update({
-                where: {
-                  id: requestId as string,
-                },
-                data: {
-                  status: RequestStatus.NECESSITA_CORRECAO,
-                },
-              }),
-            ];
+      const promises = [
+        prisma.requestResponse.update({
+          where: {
+            id: request.requestResponses.find((response) => response.selected)
+              ?.id,
+          },
+          data: {
+            selected: false,
+            status: RequestStatus.REPROVADO_DSAU,
+          },
+        }),
+        prisma.request.update({
+          where: {
+            id: requestId as string,
+          },
+          data: {
+            status: getNextStatus(
+              RequestStatus.REPROVADO_DSAU,
+              role
+            ) as RequestStatus,
+          },
+        }),
+      ];
 
       await prisma.$transaction([
         prisma.actionLog.create(
@@ -194,14 +198,14 @@ export default async function handle(
             requestId as string,
             ActionType.REPROVACAO,
             observation,
-            'request',
+            "request",
             files.files && files.files.length > 0
               ? files.files.map(
                   (file) =>
-                    `/public/arquivos/${requestId}/${file.originalFilename}`,
+                    `/public/arquivos/${requestId}/${file.originalFilename}`
                 )
-              : undefined,
-          ),
+              : undefined
+          )
         ),
         ...promises,
       ]);
@@ -227,7 +231,7 @@ export default async function handle(
 
       if (!selectedResponse) {
         return res.status(400).json({
-          message: 'Nenhuma OM selecionada',
+          message: "Nenhuma OM selecionada",
         });
       }
 
@@ -246,7 +250,7 @@ export default async function handle(
             createRequestResponse(tx, {
               requestId: requestId as string,
               receiverId,
-            }),
+            })
         );
         await Promise.all(responsePromises);
       } else {
@@ -256,14 +260,14 @@ export default async function handle(
             requestId as string,
             ActionType.APROVACAO,
             observation,
-            'request',
+            "request",
             files.files && files.files.length > 0
               ? files.files.map(
                   (file) =>
-                    `/public/arquivos/${requestId}/${file.originalFilename}`,
+                    `/public/arquivos/${requestId}/${file.originalFilename}`
                 )
-              : undefined,
-          ),
+              : undefined
+          )
         );
       }
 
@@ -280,7 +284,7 @@ export default async function handle(
     return res.status(200).json(undefined);
   }
 
-  return res.status(405).json({ message: 'Método não permitido' });
+  return res.status(405).json({ message: "Método não permitido" });
 }
 
 export const config = {
