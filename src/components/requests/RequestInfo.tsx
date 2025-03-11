@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
 import { Controller, useForm } from "react-hook-form";
 import { useMemo, useState } from "react";
-import { Request, Pacient, RequestStatus } from "@prisma/client";
+import { Request, Pacient, RequestStatus, Role } from "@prisma/client";
 import Swal from "sweetalert2";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,6 +22,8 @@ import Input, { formatCurrency } from "../common/input";
 import SpinLoading from "../common/loading/SpinLoading";
 import Select from "../common/select";
 import modal from "../common/modal";
+import { useSession } from "next-auth/react";
+import { UserType } from "@/permissions/utils";
 
 export const transformToBoolean = (value: string) => value === "true";
 
@@ -32,48 +34,55 @@ const normalizeString = (text: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9 ]/g, "");
 
-const requestFormSchema = z.object({
-  precCp: z.string(),
-  cpf: z.string(),
-  name: z.string(),
-  rank: z.string(),
-  isDependent: z.string().transform(transformToBoolean).or(z.boolean()),
-  cbhpmCode: z.object({
-    id: z.string(),
-    description: z.string(),
-    version: z.string(),
-  }),
-  needsCompanion: z.string().transform(transformToBoolean).or(z.boolean()),
-  opmeCost: z.coerce.number(),
-  psaCost: z.coerce.number(),
-  requestedOrganizations: z
-    .array(
-      z.object({
-        value: z.string(),
-        label: z.string(),
-      })
-    )
-    .nonempty(),
-});
-
-type RequestFormDataType = z.infer<typeof requestFormSchema>;
-
-export default function RequestInfo({
-  request,
-}: {
-  request?: Request & {
-    pacient: Pacient;
-    sender?: {
-      name: string;
-    };
-    requestedOrganizations: {
-      id: string;
-      name: string;
-    }[];
-  };
-}) {
-  const isInputDisabled = useMemo(
-    () => !(request?.status === RequestStatus.NECESSITA_CORRECAO),
+    
+    const requestFormSchema = z.object({
+      precCp: z.string(),
+      cpf: z.string(),
+      name: z.string(),
+      rank: z.string(),
+      isDependent: z.string().transform(transformToBoolean).or(z.boolean()),
+      cbhpmCode: z.object({
+        id: z.string(),
+        description: z.string(),
+        version: z.string(),
+      }),
+      needsCompanion: z.string().transform(transformToBoolean).or(z.boolean()),
+      opmeCost: z.coerce.number(),
+      psaCost: z.coerce.number(),
+      requestedOrganizations: z
+      .array(
+        z.object({
+          value: z.string(),
+          label: z.string(),
+        })
+        )
+        .nonempty(),
+      });
+      
+      type RequestFormDataType = z.infer<typeof requestFormSchema>;
+      
+      export default function RequestInfo({
+        request,
+      }: {
+        request?: Request & {
+          pacient: Pacient;
+          sender?: {
+            name: string;
+          };
+          requestedOrganizations: {
+            id: string;
+            name: string;
+          }[];
+        };
+      }) {
+        const {data : session} = useSession()
+        const { role } = session?.user as UserType;
+        
+        const isInputDisabled = useMemo(
+          () => {
+            const authorizedToEdit: RequestStatus[] = [RequestStatus.AGUARDANDO_RESPOSTA, RequestStatus.NECESSITA_CORRECAO]
+      return request?.status && !authorizedToEdit.includes(request?.status)
+    },
     [request]
   );
 
@@ -356,7 +365,7 @@ export default function RequestInfo({
         defaultValue={0}
         render={({ field }) => (
           <Input
-            label="Custo OCS/PSA credenciada estimado"
+            label="Custo OCS/PSA Total"
             type="text"
             divClassname="col-span-2 row-start-4"
             value={formatCurrency(field.value)}
@@ -431,8 +440,8 @@ export default function RequestInfo({
           </Button>
         </>
       )}
-      {request && request.status === RequestStatus.NECESSITA_CORRECAO && (
-        <Button type="submit" className="row-start-7">
+      {request && request.status === RequestStatus.NECESSITA_CORRECAO && role === Role.OPERADOR_FUSEX && (
+        <Button type="submit" className="row-start-7" >
           Corrigir
         </Button>
       )}

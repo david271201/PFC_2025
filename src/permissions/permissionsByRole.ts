@@ -16,7 +16,7 @@ import subdiretorSaudePermissions from './roles/subdiretor_saude';
 
 const permissionsByRole: Record<Role, Set<Permission>> = {
   [Role.SUPERADMIN]: new Set(permissions),
-  [Role.OPERADOR_FUSEX]: new Set(permissions),
+  [Role.OPERADOR_FUSEX]: operadorFusexPermissions,
   [Role.CHEFE_FUSEX]: chefeFusexPermissions,
   [Role.AUDITOR]: auditorPermissions,
   [Role.CHEFE_AUDITORIA]: chefeAuditoriaPermissions,
