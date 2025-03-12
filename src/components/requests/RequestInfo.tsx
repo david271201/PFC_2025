@@ -441,7 +441,9 @@ const normalizeString = (text: string) =>
         </>
       )}
       {request && request.status === RequestStatus.NECESSITA_CORRECAO && role === Role.OPERADOR_FUSEX && (
-        <Button type="submit" className="row-start-7" >
+        <Button type="button" 
+        onClick={handleSubmit(submitConfirmation)}
+        className="row-start-7" >
           Corrigir
         </Button>
       )}
