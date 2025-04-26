@@ -269,7 +269,7 @@ export default function RequestForm({
           </Card>
           <div className="mt-3 flex items-center gap-4">
             <Button type="submit" className="max-w-40">
-              Enviar escolha
+              Enviar
             </Button>
             {userRole === Role.CHEFE_FUSEX && (
               <Button
@@ -277,7 +277,7 @@ export default function RequestForm({
                 onClick={handleSubmit(handleNeedsCorrection)}
                 className="w-fit"
               >
-                Devolver para correção
+                Devolver
               </Button>
             )}
           </div>
