@@ -274,7 +274,7 @@ export default function RequestForm({
             {userRole === Role.CHEFE_FUSEX && (
               <Button
                 color="danger"
-                onClick={handleSubmit(handleNeedsCorrection)}
+                onClick={handleSubmit(confirmCorrection)}
                 className="w-fit"
               >
                 Devolver

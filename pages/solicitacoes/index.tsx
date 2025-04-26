@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import TableRow from '@/components/common/tablerow';
 import { GetServerSidePropsContext } from 'next';
@@ -13,6 +13,9 @@ import Button from '@/components/common/button';
 export default function RequestsListPage({ role }: { role: Role }) {
   const router = useRouter();
   const { type } = router.query;
+
+  const [cpf, setCpf] = useState('');
+  const [filteredRequests, setFilteredRequests] = useState<any[] | null>(null);
 
   const { data: requests, isLoading } = useSWR<
     (Request & {
@@ -51,6 +54,18 @@ export default function RequestsListPage({ role }: { role: Role }) {
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
   );
 
+  const handleSearchByCpf = () => {
+    if (!cpf) {
+      setFilteredRequests(null);
+      return;
+    }
+
+    const filtered = allRequests.filter((request) =>
+      request.pacientCpf?.includes(cpf),
+    );
+    setFilteredRequests(filtered);
+  };
+
   return (
     <div className="flex flex-col gap-6 p-4">
       <div className="flex w-full items-center justify-between">
@@ -71,7 +86,9 @@ export default function RequestsListPage({ role }: { role: Role }) {
               })}`,
             )
           }
-          className={`rounded p-1 text-sm ${type !== 'sent' ? 'bg-verdeClaro font-medium' : 'bg-cinzaClaro'} border border-gray-200 text-center text-grafite transition-all duration-100 ease-in-out hover:scale-105 hover:bg-verdeClaro hover:font-medium`}
+          className={`rounded p-1 text-sm ${
+            type !== 'sent' ? 'bg-verdeClaro font-medium' : 'bg-cinzaClaro'
+          } border border-gray-200 text-center text-grafite transition-all duration-100 ease-in-out hover:scale-105 hover:bg-verdeClaro hover:font-medium`}
         >
           Pendentes
         </button>
@@ -84,14 +101,31 @@ export default function RequestsListPage({ role }: { role: Role }) {
               })}`,
             )
           }
-          className={`rounded p-1 text-sm ${type === 'sent' ? 'bg-verdeClaro font-medium' : 'bg-cinzaClaro'} border border-gray-200 text-center text-grafite transition-all duration-100 ease-in-out hover:scale-105 hover:bg-verdeClaro hover:font-medium`}
+          className={`rounded p-1 text-sm ${
+            type === 'sent' ? 'bg-verdeClaro font-medium' : 'bg-cinzaClaro'
+          } border border-gray-200 text-center text-grafite transition-all duration-100 ease-in-out hover:scale-105 hover:bg-verdeClaro hover:font-medium`}
         >
           Enviadas
         </button>
       </div>
+      <div className="flex items-center gap-2 mt-4">
+        <input
+          type="text"
+          placeholder="Buscar por CPF"
+          value={cpf}
+          onChange={(e) => setCpf(e.target.value)}
+          className="border rounded px-2 py-1"
+        />
+        <button
+          onClick={handleSearchByCpf}
+          className="bg-verde text-white px-4 py-2 rounded"
+        >
+          Buscar
+        </button>
+      </div>
       {!isLoading || !isLoadingResponses ? (
         <div className="block w-full overflow-x-auto">
-          {allRequests && allRequests.length > 0 ? (
+          {(filteredRequests || allRequests).length > 0 ? (
             <table className="w-full border-collapse items-center">
               <thead className="bg-white">
                 <tr>
@@ -116,7 +150,7 @@ export default function RequestsListPage({ role }: { role: Role }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-cinzaClaro">
-                {allRequests.map((request) => (
+                {(filteredRequests || allRequests).map((request) => (
                   <TableRow
                     key={request.id}
                     request={request}
