@@ -24,6 +24,8 @@ import Select from "../common/select";
 import modal from "../common/modal";
 import { useSession } from "next-auth/react";
 import { UserType } from "@/permissions/utils";
+import { useEffect } from "react";
+
 
 export const transformToBoolean = (value: string) => value === "true";
 
@@ -75,8 +77,11 @@ const normalizeString = (text: string) =>
           }[];
         };
       }) {
-        const {data : session} = useSession()
-        const { role } = session?.user as UserType;
+        // const {data : session} = useSession();
+        const { data: session, status } = useSession();
+        const isSessionLoading = status === "loading"; // Verifica se a sessão está carregando
+        const role = session?.user ? (session.user as UserType).role : undefined;
+        // const { role } = session?.user as UserType;
         
         const isInputDisabled = useMemo(
           () => {
@@ -86,7 +91,7 @@ const normalizeString = (text: string) =>
     [request]
   );
 
-  const { register, setValue, handleSubmit, control } =
+  const { register, setValue, handleSubmit, control, watch } =
     useForm<RequestFormDataType>(
       request
         ? {
@@ -117,6 +122,15 @@ const normalizeString = (text: string) =>
 
   const [isSearchingPacient, setIsSearchingPacient] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [totalCost, setTotalCost] = useState(0); // Estado para o custo total
+  const opmeCost = watch("opmeCost", 0); // Observa mudanças no custo OPME
+  const psaCost = watch("psaCost", 0); // Observa mudanças no custo PSA
+
+  
+  useEffect(() => {
+    // Atualiza o custo total sempre que opmeCost ou psaCost mudar
+    setTotalCost(opmeCost + psaCost);
+  }, [opmeCost, psaCost]);
 
   const { data: organizations } = useSWR<
     {
@@ -241,6 +255,8 @@ const normalizeString = (text: string) =>
       onConfirm: () => onSubmit(data),
     });
   };
+  const calculateTotalCost = (opmeCost: number, psaCost: number) =>
+    opmeCost + psaCost;
 
   return (
     <form
@@ -375,7 +391,18 @@ const normalizeString = (text: string) =>
             disabled={isInputDisabled}
           />
         )}
+        
       />
+      {/* Card for Total Cost */}
+      <div className="col-span-2 row-start-5">
+        <div className="p-4 border rounded-md shadow-sm bg-white">
+          <span className="font-semibold text-grafite">Custo Total</span>
+          <p className="text-lg font-bold text-verde">
+            {formatCurrency(totalCost)}
+          </p>
+        </div>
+      </div>
+
       {!router.pathname.includes("recebidas") && (
         <div className="col-span-2 row-start-5 flex flex-col gap-1">
           <span className="font-semibold text-grafite">OMS de referência</span>

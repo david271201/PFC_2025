@@ -245,7 +245,7 @@ export default function RequestForm({
           <Card>
             <div className="flex w-full flex-col gap-2">
               <Select
-                label="Favorável?"
+                label="ENCAMINHAR PARA ANÁLISE?"
                 options={[
                   { label: "Sim", value: "true" },
                   { label: "Não", value: "false" },
@@ -257,9 +257,9 @@ export default function RequestForm({
                 divClassname="w-fit"
               />
               <div className="flex flex-col gap-1">
-                <span className="font-medium text-grafite">Observações</span>
+                <span className="font-medium text-grafite">Justificativa</span>
                 <textarea
-                  placeholder="Digite sua observação aqui..."
+                  placeholder="Digite sua justificativa aqui..."
                   rows={3}
                   className="w-full rounded border border-gray-300 px-2 text-grafite focus:outline-0 focus:ring focus:ring-verde"
                   {...register("observation")}
@@ -277,7 +277,7 @@ export default function RequestForm({
                 onClick={handleSubmit(confirmCorrection)}
                 className="w-fit"
               >
-                Devolver
+                Devolver para correção
               </Button>
             )}
           </div>
