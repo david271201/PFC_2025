@@ -40,9 +40,6 @@ function TableRow({
       }
       style={{ cursor: 'pointer' }}
     >
-      <th className="whitespace-nowrap border-x-0 border-t-0 p-4 px-6 text-left align-middle text-xs">
-        {request.id}
-      </th>
       <td className="whitespace-nowrap border-x-0 border-t-0 p-4 px-6 align-middle text-xs">
         {request.status.replaceAll('_', ' ').replace(/\d/g, '')}
       </td>

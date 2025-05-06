@@ -130,9 +130,6 @@ export default function RequestsListPage({ role }: { role: Role }) {
               <thead className="bg-white">
                 <tr>
                   <th className="whitespace-nowrap border border-x-0 border-solid px-6 py-3 text-left align-middle text-xs font-bold uppercase">
-                    ID
-                  </th>
-                  <th className="whitespace-nowrap border border-x-0 border-solid px-6 py-3 text-left align-middle text-xs font-bold uppercase">
                     Status
                   </th>
                   <th className="whitespace-nowrap border border-x-0 border-solid px-6 py-3 text-left align-middle text-xs font-bold uppercase">
