@@ -47,7 +47,7 @@ enum RequestStatus {
   REPROVADO_DSAU
   CANCELADO
   APROVADO
-  // APROVADO_DSAU
+  APROVADO_DSAU
 }
 
 enum ActionType {
@@ -77,18 +77,19 @@ enum Role {
 }
 
 model User {
-  id             String        @id @default(uuid())
-  email          String        @unique
-  cpf            String        @unique
-  password       String
-  name           String
-  role           Role
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  organizationId String?
-  createdAt      DateTime      @default(now())
-  region         Region?       @relation(fields: [regionId], references: [id])
-  regionId       String?
-  actions        ActionLog[]
+  id                     String             @id @default(uuid())
+  email                  String             @unique
+  cpf                    String             @unique
+  password               String
+  name                   String
+  role                   Role
+  organization           Organization?      @relation(fields: [organizationId], references: [id])
+  organizationId         String?
+  createdAt              DateTime           @default(now())
+  region                 Region?            @relation(fields: [regionId], references: [id])
+  regionId               String?
+  actions                ActionLog[]
+  formulariosRegistrados FormularioMedico[] @relation("UserFormularioMedico")
 }
 
 model Organization {
@@ -166,4 +167,56 @@ model ActionLog {
   observation       String?
   files             String[]
   createdAt         DateTime         @default(now())
+}
+
+model FormularioMedico {
+  id                           String   @id @default(uuid())
+  // Dados do beneficiário
+  nomeBeneficiario             String
+  precCpMatriculaCpf           String
+  idade                        String
+  postoGraduacaoTitular        String
+  necessitaAcompanhante        Boolean
+  consultaExame                String
+  
+  // Divisão de Medicina
+  profissionalCiente           Boolean
+  justificativaProfissionalCiente String?
+  
+  // Depósito de Material Cirúrgico
+  materialDisponivel           Boolean
+  justificativaMaterialDisponivel String?
+  
+  // Centro Cirúrgico
+  pacienteNoMapa               Boolean
+  justificativaPacienteNoMapa  String?
+  setorEmCondicoes             Boolean
+  justificativaSetorEmCondicoes String?
+  
+  // Unidade de Internação
+  leitoReservado               Boolean?
+  justificativaLeitoReservado  String?
+  
+  // Assistência Social
+  hotelReservado               Boolean?
+  justificativaHotelReservado  String?
+  
+  // Traslado
+  motorista1                   String?
+  horario1                     String?
+  motorista2                   String?
+  horario2                     String?
+  motorista3                   String?
+  horario3                     String?
+  motorista4                   String?
+  horario4                     String?
+  
+  // Aprovação
+  aprovacao                    Boolean? @default(false)
+  
+  // Metadados
+  criadoPor                    User     @relation("UserFormularioMedico", fields: [criadoPorId], references: [id])
+  criadoPorId                  String
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
 }
