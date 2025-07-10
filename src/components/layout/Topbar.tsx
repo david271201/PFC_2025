@@ -30,6 +30,7 @@ export default function Topbar() {
           >
             Solicitações
           </button>
+          {/* Botão Estatísticas - apenas para papéis específicos */}
           {user?.role === Role.SUBDIRETOR_SAUDE && (
             <button
               type="button"
@@ -39,6 +40,15 @@ export default function Topbar() {
               Estatísticas
             </button>
           )}
+          
+          {/* Botão Insights - disponível para todos os usuários autenticados */}
+          <button
+            type="button"
+            onClick={() => router.push('/insights')}
+            className={`rounded print:hidden ${pathname.includes('/insights') ? 'bg-verdeEscuro' : ''} px-2 py-1 text-white hover:bg-verdeEscuro`}
+          >
+            Insights
+          </button>
         </div>
       </div>
       <div className="relative">
