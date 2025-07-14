@@ -191,7 +191,7 @@ export default function FormularioMedicoParte1() {
             </div>
 
             <div className="col-span-7 border-t border-gray-200 pt-4 mt-4">
-              <h3 className="text-base font-semibold text-grafite mb-2">DIVISÃO DE MEDICINA/DIVISÃO DE CLÍNICAS <span className="text-red-600">(Responsável na OMS Destino)</span></h3>
+              <h3 className="text-base font-semibold text-grafite mb-2">DIVISÃO DE MEDICINA/DIVISÃO DE CLÍNICAS </h3>
               
               <div className="mb-3">
                 <p className="mb-1 text-sm font-medium text-grafite">O profissional está ciente da data do agendamento para avaliação e realização do procedimento?</p>
@@ -227,9 +227,9 @@ export default function FormularioMedicoParte1() {
               </div>
 
               <div className="mt-4 mb-3">
-                <p className="mb-1 text-sm font-medium text-grafite">Assinatura:</p>
-                <div className="w-full border-b border-gray-400 h-6"></div>
-                <p className="text-center text-sm">Chefe da Divisão de Medicina</p>
+                {/* <p className="mb-1 text-sm font-medium text-grafite">Assinatura:</p> */}
+                {/* <div className="w-full border-b border-gray-400 h-6"></div> */}
+                {/* <p className="text-center text-sm">Chefe da Divisão de Medicina</p> */}
               </div>
             </div>
 
@@ -270,9 +270,9 @@ export default function FormularioMedicoParte1() {
               </div>
 
               <div className="mt-4 mb-3">
-                <p className="mb-1 text-sm font-medium text-grafite">Assinatura:</p>
-                <div className="w-full border-b border-gray-400 h-6"></div>
-                <p className="text-center text-sm">Chefe da Farmácia</p>
+                {/* <p className="mb-1 text-sm font-medium text-grafite">Assinatura:</p> */}
+                {/* <div className="w-full border-b border-gray-400 h-6"></div> */}
+                {/* <p className="text-center text-sm">Chefe da Farmácia</p> */}
               </div>
             </div>
 
@@ -346,9 +346,9 @@ export default function FormularioMedicoParte1() {
               </div>
 
               <div className="mt-4 mb-3">
-                <p className="mb-1 text-sm font-medium text-grafite">Assinatura:</p>
-                <div className="w-full border-b border-gray-400 h-6"></div>
-                <p className="text-center text-sm">Chefe do Centro Cirúrgico</p>
+                {/* <p className="mb-1 text-sm font-medium text-grafite">Assinatura:</p> */}
+                {/* <div className="w-full border-b border-gray-400 h-6"></div> */}
+                {/* <p className="text-center text-sm">Chefe do Centro Cirúrgico</p> */}
               </div>
             </div>
             
@@ -389,9 +389,9 @@ export default function FormularioMedicoParte1() {
               </div>
 
               <div className="mt-4 mb-3">
-                <p className="mb-1 text-sm font-medium text-grafite">Assinatura:</p>
-                <div className="w-full border-b border-gray-400 h-6"></div>
-                <p className="text-center text-sm">Chefe do Setor de Internação</p>
+                {/* <p className="mb-1 text-sm font-medium text-grafite">Assinatura:</p> */}
+                {/* <div className="w-full border-b border-gray-400 h-6"></div> */}
+                {/* <p className="text-center text-sm">Chefe do Setor de Internação</p> */}
               </div>
             </div>
             

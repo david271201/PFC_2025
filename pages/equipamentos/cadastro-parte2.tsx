@@ -16,16 +16,6 @@ import { checkPermission, UserType } from '@/permissions/utils';
 
 // Schema para validação da segunda parte do formulário
 const formularioMedicoParte2Schema = z.object({
-  profissionalCiente: z.string().transform((val) => val === "sim"),
-  justificativaNegativa: z.string().optional(),
-  materialDisponivel: z.string().transform((val) => val === "sim"),
-  justificativaMaterial: z.string().optional(),
-  pacienteNoMapa: z.string().transform((val) => val === "sim"),
-  justificativaMapa: z.string().optional(),
-  setorEmCondicoes: z.string().transform((val) => val === "sim"),
-  justificativaSetor: z.string().optional(),
-  leitoReservado: z.string().transform((val) => val === "sim"),
-  justificativaLeito: z.string().optional(),
   hotelReservado: z.string().transform((val) => val === "sim"),
   justificativaHotel: z.string().optional(),
   
@@ -70,11 +60,6 @@ export default function FormularioMedicoParte2() {
   } = useForm<FormularioMedicoParte2Data>({
     resolver: zodResolver(formularioMedicoParte2Schema),
     defaultValues: {
-      profissionalCiente: false,
-      materialDisponivel: false,
-      pacienteNoMapa: false,
-      setorEmCondicoes: false,
-      leitoReservado: false,
       hotelReservado: false,
       aprovacao: false,
     }
@@ -137,207 +122,9 @@ export default function FormularioMedicoParte2() {
         <h1 className="text-2xl font-bold text-grafite">Formulário de Atendimento Médico - RM Destino (Seç Sau Reg)</h1>
         <Card>
           <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-7 gap-4">
-            <div className="col-span-7 border-b border-gray-200 pb-2 mb-2">
-              <h2 className="text-lg font-semibold text-grafite">DIVISÃO DE MEDICINA/DIVISÃO DE CLÍNICAS</h2>
-              <p className="text-sm text-red-600">(Responsável na OMS Destino)</p>
-            </div>
-
-            <div className="col-span-7 mb-2">
-              <p className="mb-1 text-sm font-medium text-grafite">O profissional está ciente da data do agendamento para avaliação e realização do procedimento?</p>
-              <div className="flex items-center gap-6 mb-2">
-                <label className="flex items-center gap-2">
-                  <input 
-                    type="radio" 
-                    value="sim"
-                    {...register('profissionalCiente')}
-                    className="h-4 w-4 text-verde focus:ring-verde" 
-                  />
-                  <span>Sim</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input 
-                    type="radio" 
-                    value="nao"
-                    {...register('profissionalCiente')}
-                    className="h-4 w-4 text-verde focus:ring-verde" 
-                  />
-                  <span>Não</span>
-                </label>
-              </div>
-              <div className="col-span-7">
-                <label className="mb-1 block text-sm font-medium text-grafite">
-                  Em caso de negativa justificar:
-                </label>
-                <textarea
-                  className="w-full rounded-md border border-cinzaClaro px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none"
-                  rows={2}
-                  {...register('justificativaNegativa')}
-                />
-              </div>
-              <div className="mt-2 text-right">
-                <p className="text-sm italic">Assinatura: _______________________</p>
-                <p className="text-sm">Chefe da Divisão de Medicina</p>
-              </div>
-            </div>
-
-            <div className="col-span-7 border-t border-b border-gray-200 py-4 mb-2">
-              <h2 className="text-lg font-semibold text-grafite">DEPÓSITO DE MATERIAL CIRÚRGICO/FARMÁCIA/ SETOR OPME</h2>
-              <div className="mt-2">
-                <p className="mb-1 text-sm font-medium text-grafite">O material para a cirurgia e os OPME encontram-se disponíveis?</p>
-                <div className="flex items-center gap-6 mb-2">
-                  <label className="flex items-center gap-2">
-                    <input 
-                      type="radio" 
-                      value="sim"
-                      {...register('materialDisponivel')}
-                      className="h-4 w-4 text-verde focus:ring-verde" 
-                    />
-                    <span>Sim</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input 
-                      type="radio" 
-                      value="nao"
-                      {...register('materialDisponivel')}
-                      className="h-4 w-4 text-verde focus:ring-verde" 
-                    />
-                    <span>Não</span>
-                  </label>
-                </div>
-                <div className="col-span-7">
-                  <label className="mb-1 block text-sm font-medium text-grafite">
-                    Em caso de negativa justificar:
-                  </label>
-                  <textarea
-                    className="w-full rounded-md border border-cinzaClaro px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none"
-                    rows={2}
-                    {...register('justificativaMaterial')}
-                  />
-                </div>
-                <div className="mt-2 text-right">
-                  <p className="text-sm italic">Assinatura: _______________________</p>
-                  <p className="text-sm">Chefe da Farmácia</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-span-7 mb-2">
-              <h2 className="text-lg font-semibold text-grafite">CENTRO CIRÚRGICO</h2>
-              <p className="mb-1 text-sm font-medium text-grafite">O nome do paciente consta no mapa cirúrgico referente ao dia do agendamento?</p>
-              <div className="flex items-center gap-6 mb-2">
-                <label className="flex items-center gap-2">
-                  <input 
-                    type="radio" 
-                    value="sim"
-                    {...register('pacienteNoMapa')}
-                    className="h-4 w-4 text-verde focus:ring-verde" 
-                  />
-                  <span>Sim</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input 
-                    type="radio" 
-                    value="nao"
-                    {...register('pacienteNoMapa')}
-                    className="h-4 w-4 text-verde focus:ring-verde" 
-                  />
-                  <span>Não</span>
-                </label>
-              </div>
-              <div className="col-span-7">
-                <label className="mb-1 block text-sm font-medium text-grafite">
-                  Em caso de negativa justificar:
-                </label>
-                <textarea
-                  className="w-full rounded-md border border-cinzaClaro px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none"
-                  rows={2}
-                  {...register('justificativaMapa')}
-                />
-              </div>
-              
-              <div className="mt-4">
-                <p className="mb-1 text-sm font-medium text-grafite">O setor está em condições de realizar o procedimento do beneficiário?</p>
-                <div className="flex items-center gap-6 mb-2">
-                  <label className="flex items-center gap-2">
-                    <input 
-                      type="radio" 
-                      value="sim"
-                      {...register('setorEmCondicoes')}
-                      className="h-4 w-4 text-verde focus:ring-verde" 
-                    />
-                    <span>Sim</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input 
-                      type="radio" 
-                      value="nao"
-                      {...register('setorEmCondicoes')}
-                      className="h-4 w-4 text-verde focus:ring-verde" 
-                    />
-                    <span>Não</span>
-                  </label>
-                </div>
-                <div className="col-span-7">
-                  <label className="mb-1 block text-sm font-medium text-grafite">
-                    Em caso de negativa justificar:
-                  </label>
-                  <textarea
-                    className="w-full rounded-md border border-cinzaClaro px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none"
-                    rows={2}
-                    {...register('justificativaSetor')}
-                  />
-                </div>
-                <div className="mt-2 text-right">
-                  <p className="text-sm italic">Assinatura: _______________________</p>
-                  <p className="text-sm">Chefe do Centro Cirúrgico</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="col-span-7 border-t border-b border-gray-200 py-4 mb-2 mt-4">
-              <h2 className="text-lg font-semibold text-grafite">UNIDADE DE INTERNAÇÃO</h2>
-              <div className="mt-2">
-                <p className="mb-1 text-sm font-medium text-grafite">Há leito reservado para o paciente?</p>
-                <div className="flex items-center gap-6 mb-2">
-                  <label className="flex items-center gap-2">
-                    <input 
-                      type="radio" 
-                      value="sim"
-                      {...register('leitoReservado')}
-                      className="h-4 w-4 text-verde focus:ring-verde" 
-                    />
-                    <span>Sim</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input 
-                      type="radio" 
-                      value="nao"
-                      {...register('leitoReservado')}
-                      className="h-4 w-4 text-verde focus:ring-verde" 
-                    />
-                    <span>Não</span>
-                  </label>
-                </div>
-                <div className="col-span-7">
-                  <label className="mb-1 block text-sm font-medium text-grafite">
-                    Em caso de negativa justificar:
-                  </label>
-                  <textarea
-                    className="w-full rounded-md border border-cinzaClaro px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none"
-                    rows={2}
-                    {...register('justificativaLeito')}
-                  />
-                </div>
-                <div className="mt-2 text-right">
-                  <p className="text-sm italic">Assinatura: _______________________</p>
-                  <p className="text-sm">Chefe do Setor de Internação</p>
-                </div>
-              </div>
-            </div>
-            
             <div className="col-span-7 mb-4">
               <h2 className="text-lg font-semibold text-grafite">ASSISTÊNCIA SOCIAL</h2>
-              <p className="text-sm text-red-600 mb-2">(Daqui pra baixo, a cargo da RM destino (Seç Sau Reg, mudando o nome))</p>
+              {/* <p className="text-sm text-red-600 mb-2">(Daqui pra baixo, a cargo da RM destino (Seç Sau Reg, mudando o nome))</p> */}
               <div className="mt-2">
                 <p className="mb-1 text-sm font-medium text-grafite">Há Hotel de Trânsito ou Casa de Hóspedes reservado(a) para o paciente?</p>
                 <div className="flex items-center gap-6 mb-2">
@@ -371,7 +158,7 @@ export default function FormularioMedicoParte2() {
                   />
                 </div>
                 <div className="mt-2 text-right">
-                  <p className="text-sm italic">Assinatura: _______________________</p>
+                  {/* <p className="text-sm italic">Assinatura: _______________________</p> */}
                   <p className="text-sm">Chefe do Setor de Assistência Social</p>
                 </div>
               </div>
@@ -496,7 +283,7 @@ export default function FormularioMedicoParte2() {
                 </div>
                 
                 <div className="mt-3 mb-3 text-right">
-                  <p className="text-sm italic">Assinatura: _______________________</p>
+                  {/* <p className="text-sm italic">Assinatura: _______________________</p> */}
                   <p className="text-sm">Ch Setor de Assistência Social</p>
                 </div>
               </div>
@@ -526,7 +313,7 @@ export default function FormularioMedicoParte2() {
                 </div>
                 
                 <div className="mt-3 mb-3 text-center">
-                  <p className="text-sm italic">Assinatura: _______________________</p>
+                  {/* <p className="text-sm italic">Assinatura: _______________________</p> */}
                   <p className="text-sm">Cmt/Dir/Ch da UG FuSEx</p>
                 </div>
               </div>
