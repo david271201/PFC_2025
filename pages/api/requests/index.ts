@@ -1,5 +1,5 @@
 import logAction from '@/log-action';
-import { checkPermission, UserType } from '@/permissions/utils';
+import { checkPermission, UserType, statusTransitions } from '@/permissions/utils';
 import { isStatusForRole } from '@/utils';
 import { auth } from '@@/auth';
 import prisma from '@@/prisma/prismaClient';
@@ -63,6 +63,32 @@ export default async function handle(
             userId,
           },
         },
+        // Para solicitações enviadas, excluímos aquelas que estão aguardando ação do usuário atual
+        status: {
+          not: {
+            in: Object.entries(statusTransitions)
+                  .filter(([_, transition]) => transition?.requiredRole === role)
+                  .map(([status]) => status as RequestStatus)
+                  .concat([RequestStatus.NECESSITA_CORRECAO])
+          }
+        }
+      };
+    } else {
+      // Para solicitações pendentes, incluímos apenas aquelas que precisam da ação do usuário atual
+      whereClause = {
+        ...whereClause,
+        OR: [
+          {
+            status: {
+              in: Object.entries(statusTransitions)
+                    .filter(([_, transition]) => transition?.requiredRole === role)
+                    .map(([status]) => status as RequestStatus)
+            }
+          },
+          {
+            status: RequestStatus.NECESSITA_CORRECAO
+          }
+        ]
       };
     }
 
@@ -80,13 +106,7 @@ export default async function handle(
       },
     });
 
-    const roleRequests = requests.filter(
-      (request) =>
-        isStatusForRole(request.status, role) &&
-        request.status !== RequestStatus.AGUARDANDO_RESPOSTA,
-    );
-
-    return res.status(200).json(filter === 'sent' ? requests : roleRequests);
+    return res.status(200).json(requests);
   }
 
   if (req.method === 'POST') {

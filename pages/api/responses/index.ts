@@ -1,8 +1,9 @@
-import { checkPermission, UserType } from '@/permissions/utils';
+import { checkPermission, UserType, statusTransitions } from '@/permissions/utils';
 import { isStatusForRole } from '@/utils';
 import { auth } from '@@/auth';
 import prisma from '@@/prisma/prismaClient';
 import { NextApiRequest, NextApiResponse } from 'next';
+import { RequestStatus } from '@prisma/client';
 
 export default async function handle(
   req: NextApiRequest,
@@ -41,6 +42,32 @@ export default async function handle(
             userId,
           },
         },
+        // Para respostas enviadas, excluímos aquelas que estão aguardando ação do usuário atual
+        status: {
+          not: {
+            in: Object.entries(statusTransitions)
+                  .filter(([_, transition]) => transition?.requiredRole === role)
+                  .map(([status]) => status as RequestStatus)
+                  .concat([RequestStatus.NECESSITA_CORRECAO])
+          }
+        }
+      };
+    } else {
+      // Para respostas pendentes, incluímos apenas aquelas que precisam da ação do usuário atual
+      whereClause = {
+        ...whereClause,
+        OR: [
+          {
+            status: {
+              in: Object.entries(statusTransitions)
+                    .filter(([_, transition]) => transition?.requiredRole === role)
+                    .map(([status]) => status as RequestStatus)
+            }
+          },
+          {
+            status: RequestStatus.NECESSITA_CORRECAO
+          }
+        ]
       };
     }
 
@@ -62,13 +89,7 @@ export default async function handle(
       },
     });
 
-    const roleResponses = requestResponses.filter((requestResponse) =>
-      isStatusForRole(requestResponse.status, role),
-    );
-
-    return res
-      .status(200)
-      .json(filter === 'sent' ? requestResponses : roleResponses);
+    return res.status(200).json(requestResponses);
   }
 
   if (req.method === 'POST') {

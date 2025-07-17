@@ -69,7 +69,9 @@ export default function RequestsListPage({ role }: { role: Role }) {
   return (
     <div className="flex flex-col gap-6 p-4">
       <div className="flex w-full items-center justify-between">
-        <h1 className="text-2xl font-bold text-grafite">Solicitações</h1>
+        <h1 className="text-2xl font-bold text-grafite">
+          {type === 'sent' ? 'Solicitações Enviadas' : 'Solicitações Pendentes de Ação'}
+        </h1>
         {role === Role.OPERADOR_FUSEX && (
           <Button onClick={() => router.push('/solicitacoes/criar')}>
             Solicitar evacuação

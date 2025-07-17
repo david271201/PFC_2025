@@ -10,6 +10,11 @@ export function isStatusForRole(
     return false;
   }
 
+  // Se a solicitação precisa de correção, qualquer papel pode vê-la para corrigir
+  if (status === RequestStatus.NECESSITA_CORRECAO) {
+    return true;
+  }
+
   if (
     status === RequestStatus.AGUARDANDO_RESPOSTA &&
     role === Role.HOMOLOGADOR

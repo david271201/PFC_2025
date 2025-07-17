@@ -97,10 +97,6 @@ export default async function handle(
     role
   );
 
-  if (nextStatus === "unauthorized") {
-    return res.status(403).json({ message: "Usuário não autorizado" });
-  }
-
   const formData = formidable({ multiples: true });
   const [fields, files] = await formData.parse(req);
   const formattedFields = Object.entries(fields).reduce((acc, [key, value]) => {
@@ -127,41 +123,48 @@ export default async function handle(
   }, {} as any);
 
   if (req.method === "PATCH") {
-    if (!checkPermission(role, "requests:update")) {
-      return res.status(403).json({ message: "Usuário não autorizado" });
-    }
     const {
       favorable,
       correction = false,
+      cancel = false,
       observation,
       ticketCosts,
       cancelUnfinishedResponses,
     } = formattedFields;
 
-    if (files.files && files.files.length > 0) {
-      const uploadDir = path.join(
-        process.cwd(),
-        `/public/arquivos/${requestId}`
-      );
+    // Caso especial para cancelamento pelo OPERADOR_FUSEX
+    if (cancel && role === Role.OPERADOR_FUSEX) {
+      // Verificamos apenas se o OPERADOR_FUSEX tem permissão de atualização
+      if (!checkPermission(role, "requests:update")) {
+        return res.status(403).json({ message: "Usuário não autorizado" });
+      }
 
-      files.files.forEach((file) => {
-        const oldPath = file.filepath;
-        const newPath = path.join(uploadDir, file.originalFilename as string);
-        if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        fs.renameSync(oldPath, newPath);
-      });
-    }
+      await prisma.$transaction(async (tx) => {
+        // Cancelar todas as respostas ativas
+        await tx.requestResponse.updateMany({
+          where: {
+            requestId: requestId as string,
+            status: {
+              notIn: [
+                RequestStatus.CANCELADO,
+                RequestStatus.APROVADO,
+                RequestStatus.REPROVADO,
+                RequestStatus.REPROVADO_DSAU,
+              ]
+            }
+          },
+          data: {
+            status: RequestStatus.CANCELADO
+          }
+        });
 
-    if (correction) {
-      await prisma.$transaction([
-        prisma.actionLog.create(
+        // Registrar a ação de cancelamento
+        await tx.actionLog.create(
           logAction(
             userId,
             requestId as string,
-            ActionType.REPROVACAO,
-            observation || "Enviado para correção",
+            ActionType.CANCELAMENTO,
+            observation || "Solicitação cancelada pelo Operador FUSEX",
             "request",
             files.files && files.files.length > 0
               ? files.files.map(
@@ -170,20 +173,77 @@ export default async function handle(
                 )
               : undefined
           )
-        ),
-        prisma.request.update({
+        );
+
+        // Atualizar o status da solicitação para CANCELADO
+        await tx.request.update({
           where: {
             id: requestId as string,
           },
           data: {
-            status: RequestStatus.NECESSITA_CORRECAO,
+            status: RequestStatus.CANCELADO,
           },
-        })
-      ]);
+        });
+      });
+
       return res.status(200).json(undefined);
     }
 
-    if (!favorable) {
+    // Para os outros casos, verificamos se o usuário está autorizado pelo status atual
+    if (nextStatus === "unauthorized") {
+      return res.status(403).json({ message: "Usuário não autorizado" });
+    }
+
+    if (!checkPermission(role, "requests:update")) {
+      return res.status(403).json({ message: "Usuário não autorizado" });
+    }
+
+    if (files.files && files.files.length > 0) {
+      const uploadDir = path.join(
+        process.cwd(),
+        `/public/arquivos/${requestId}`
+      );
+
+        files.files.forEach((file) => {
+          const oldPath = file.filepath;
+          const newPath = path.join(uploadDir, file.originalFilename as string);
+          if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+          }
+          fs.renameSync(oldPath, newPath);
+        });
+      }
+
+      // Já tratamos o cancelamento acima, então removemos esta seção
+      
+      if (correction) {
+        await prisma.$transaction([
+          prisma.actionLog.create(
+            logAction(
+              userId,
+              requestId as string,
+              ActionType.REPROVACAO,
+              observation || "Enviado para correção",
+              "request",
+              files.files && files.files.length > 0
+                ? files.files.map(
+                    (file) =>
+                      `/public/arquivos/${requestId}/${file.originalFilename}`
+                  )
+                : undefined
+            )
+          ),
+          prisma.request.update({
+            where: {
+              id: requestId as string,
+            },
+            data: {
+              status: RequestStatus.NECESSITA_CORRECAO,
+            },
+          })
+        ]);
+        return res.status(200).json(undefined);
+      }    if (!favorable) {
       const promises = [
         prisma.requestResponse.update({
           where: {

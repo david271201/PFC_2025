@@ -90,7 +90,7 @@ export default function RequestPage({ role }: { role: Role }) {
               <ResponsesTable responses={request.requestResponses} />
             </div>
           )}
-        {isStatusForRole(request?.status, role) && (
+        {(isStatusForRole(request?.status, role) || role === Role.OPERADOR_FUSEX) && (
           <RequestForm
             status={request?.status}
             responses={responses}

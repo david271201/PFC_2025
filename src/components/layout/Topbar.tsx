@@ -1,7 +1,7 @@
 import { UserType } from '@/permissions/utils';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { Role } from '@prisma/client';
-import { signOut, useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
@@ -74,7 +74,9 @@ export default function Topbar() {
             <div className="flex justify-center">
               <button
                 type="button"
-                onClick={() => signOut()}
+                onClick={() => {
+                  signOut({ callbackUrl: '/' });
+                }}
                 className="mt-2 w-full rounded bg-red-500 py-2 text-white hover:bg-red-600"
               >
                 Sair

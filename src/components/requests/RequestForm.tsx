@@ -200,6 +200,40 @@ export default function RequestForm({
     }
   };
 
+  const cancelRequest = async () => {
+    const formData = new FormData();
+    formData.append("cancel", "true");
+    formData.append("observation", "Solicitação cancelada pelo Operador FUSEX");
+
+    const response = await fetch(`/api/requests/${requestId}/status`, {
+      method: "PATCH",
+      body: formData,
+    });
+
+    if (response.ok) {
+      router.push("/solicitacoes");
+    } else {
+      Swal.fire({
+        title: "Erro",
+        icon: "error",
+        text: "Ocorreu um erro ao cancelar a solicitação",
+        customClass: {
+          confirmButton:
+            "bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro",
+        },
+      });
+    }
+  };
+
+  const confirmCancelation = () => {
+    modal({
+      title: "Cancelar solicitação",
+      text: "Deseja cancelar esta solicitação? Esta ação é irreversível e encerrará o fluxo para todos os usuários envolvidos.",
+      icon: "warning",
+      onConfirm: cancelRequest,
+    });
+  };
+
   const submitConfirmation = async (data: OpinionFormDataType) => {
     if (
       status === RequestStatus.AGUARDANDO_RESPOSTA &&
@@ -239,27 +273,25 @@ export default function RequestForm({
       onSubmit={handleSubmit(submitConfirmation)}
       className="flex w-full flex-col gap-2"
     >
-      {!(status === RequestStatus.AGUARDANDO_RESPOSTA && !responses) && (
+      {userRole === Role.OPERADOR_FUSEX ? (
+        <div className="mt-3">
+          <Button
+            color="danger"
+            onClick={confirmCancelation}
+            className="w-fit"
+          >
+            Cancelar Solicitação
+          </Button>
+        </div>
+      ) : status === RequestStatus.NECESSITA_CORRECAO ? (
         <>
-          <h2 className="text-xl font-bold text-grafite">Parecer</h2>
+          <h2 className="text-xl font-bold text-grafite">Corrigir Solicitação</h2>
           <Card>
             <div className="flex w-full flex-col gap-2">
-              <Select
-                label="ENCAMINHAR PARA ANÁLISE?"
-                options={[
-                  { label: "Sim", value: "true" },
-                  { label: "Não", value: "false" },
-                ]}
-                {...register("favorable", {
-                  required: true,
-                  onChange: (e) => handleSelectChange(e),
-                })}
-                divClassname="w-fit"
-              />
               <div className="flex flex-col gap-1">
-                <span className="font-medium text-grafite">Justificativa</span>
+                <span className="font-medium text-grafite">Observações para Correção</span>
                 <textarea
-                  placeholder="Digite sua justificativa aqui..."
+                  placeholder="Adicione informações para correção..."
                   rows={3}
                   className="w-full rounded border border-gray-300 px-2 text-grafite focus:outline-0 focus:ring focus:ring-verde"
                   {...register("observation")}
@@ -269,9 +301,43 @@ export default function RequestForm({
           </Card>
           <div className="mt-3 flex items-center gap-4">
             <Button type="submit" className="max-w-40">
-              Enviar
+              Reenviar Solicitação Corrigida
             </Button>
-            {userRole !== Role.OPERADOR_FUSEX && (
+          </div>
+        </>
+      ) : (
+        !(status === RequestStatus.AGUARDANDO_RESPOSTA && !responses) && (
+          <>
+            <h2 className="text-xl font-bold text-grafite">Parecer</h2>
+            <Card>
+              <div className="flex w-full flex-col gap-2">
+                <Select
+                  label="ENCAMINHAR PARA ANÁLISE?"
+                  options={[
+                    { label: "Sim", value: "true" },
+                    { label: "Não", value: "false" },
+                  ]}
+                  {...register("favorable", {
+                    required: true,
+                    onChange: (e) => handleSelectChange(e),
+                  })}
+                  divClassname="w-fit"
+                />
+                <div className="flex flex-col gap-1">
+                  <span className="font-medium text-grafite">Justificativa</span>
+                  <textarea
+                    placeholder="Digite sua justificativa aqui..."
+                    rows={3}
+                    className="w-full rounded border border-gray-300 px-2 text-grafite focus:outline-0 focus:ring focus:ring-verde"
+                    {...register("observation")}
+                  />
+                </div>
+              </div>
+            </Card>
+            <div className="mt-3 flex items-center gap-4">
+              <Button type="submit" className="max-w-40">
+                Enviar
+              </Button>
               <Button
                 color="danger"
                 onClick={handleSubmit(confirmCorrection)}
@@ -279,9 +345,9 @@ export default function RequestForm({
               >
                 Devolver para correção
               </Button>
-            )}
-          </div>
-        </>
+            </div>
+          </>
+        )
       )}
     </form>
   );
