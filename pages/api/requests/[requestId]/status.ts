@@ -155,14 +155,31 @@ export default async function handle(
     }
 
     if (correction) {
-      await prisma.request.update({
-        where: {
-          id: requestId as string,
-        },
-        data: {
-          status: RequestStatus.NECESSITA_CORRECAO,
-        },
-      });
+      await prisma.$transaction([
+        prisma.actionLog.create(
+          logAction(
+            userId,
+            requestId as string,
+            ActionType.REPROVACAO,
+            observation || "Enviado para correção",
+            "request",
+            files.files && files.files.length > 0
+              ? files.files.map(
+                  (file) =>
+                    `/public/arquivos/${requestId}/${file.originalFilename}`
+                )
+              : undefined
+          )
+        ),
+        prisma.request.update({
+          where: {
+            id: requestId as string,
+          },
+          data: {
+            status: RequestStatus.NECESSITA_CORRECAO,
+          },
+        })
+      ]);
       return res.status(200).json(undefined);
     }
 

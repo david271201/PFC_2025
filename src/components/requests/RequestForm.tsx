@@ -177,7 +177,7 @@ export default function RequestForm({
 
   const submitCorrection = async (data: OpinionFormDataType) => {
     const formData = new FormData();
-    formData.append("favorable", "false");
+    formData.append("correction", "true");
     formData.append("observation", data.observation || "");
 
     const response = await fetch(`/api/requests/${requestId}/status`, {
@@ -271,7 +271,7 @@ export default function RequestForm({
             <Button type="submit" className="max-w-40">
               Enviar
             </Button>
-            {userRole === Role.CHEFE_FUSEX && (
+            {userRole !== Role.OPERADOR_FUSEX && (
               <Button
                 color="danger"
                 onClick={handleSubmit(confirmCorrection)}

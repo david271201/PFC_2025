@@ -115,7 +115,7 @@ export default async function handler(
           aprovacao: dadosFormulario.aprovacao,
           
           // Registro do usuário que criou
-          criadoPorId: userId
+          criadoPorId: userId as string
         }
       });
 
