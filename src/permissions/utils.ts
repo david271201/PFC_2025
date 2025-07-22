@@ -32,13 +32,23 @@ export const statusTransitions: Record<
     nextStatus: RequestStatus;
     previousStatus: RequestStatus | null;
     requiredRole: Role;
-    onRejection?: RequestStatus; // Adiciona a opção de rejeição
+    onRejection?: RequestStatus;
+    onCorrection?: {
+      status: RequestStatus;
+      requiredRole: Role;
+      returnStatus: RequestStatus;
+    };
   } | null
 > = {
   [RequestStatus.AGUARDANDO_CHEFE_FUSEX_1]: {
     nextStatus: RequestStatus.AGUARDANDO_CHEFE_AUDITORIA_1,
     previousStatus: null,
     requiredRole: Role.CHEFE_FUSEX,
+    onCorrection: {
+      status: RequestStatus.NECESSITA_CORRECAO,
+      requiredRole: Role.OPERADOR_FUSEX,
+      returnStatus: RequestStatus.AGUARDANDO_CHEFE_FUSEX_1
+    }
   },
   [RequestStatus.AGUARDANDO_CHEFE_AUDITORIA_1]: {
     nextStatus: RequestStatus.AGUARDANDO_AUDITOR,
@@ -185,6 +195,12 @@ export const statusTransitions: Record<
     requiredRole: Role.HOMOLOGADOR,
   },
   [RequestStatus.CANCELADO]: null,
+  [RequestStatus.NECESSITA_CORRECAO]: {
+    nextStatus: RequestStatus.AGUARDANDO_CHEFE_FUSEX_1,
+    previousStatus: null,
+    requiredRole: Role.OPERADOR_FUSEX,
+  },
+  [RequestStatus.APROVADO_DSAU]: null,
   //[RequestStatus.DEVOLVIDO_PARA_CORRECAO]: {
   //  nextStatus: RequestStatus.AGUARDANDO_CHEFE_FUSEX_3,
   //  previousStatus: RequestStatus.AGUARDANDO_CHEFE_FUSEX_3,

@@ -177,10 +177,16 @@ export default function RequestForm({
 
   const submitCorrection = async (data: OpinionFormDataType) => {
     const formData = new FormData();
-    formData.append("correction", "true");
     formData.append("observation", data.observation || "");
+    
+    // Adicionar arquivos se houver
+    if (selectedFiles.length > 0) {
+      selectedFiles.forEach((file) => {
+        formData.append("files", file);
+      });
+    }
 
-    const response = await fetch(`/api/requests/${requestId}/status`, {
+    const response = await fetch(`/api/requests/${requestId}/correction`, {
       method: "PATCH",
       body: formData,
     });
@@ -188,10 +194,11 @@ export default function RequestForm({
     if (response.ok) {
       router.push("/solicitacoes");
     } else {
+      const error = await response.json();
       Swal.fire({
         title: "Erro",
         icon: "error",
-        text: "Ocorreu um erro ao devolver para correção",
+        text: error.message || "Ocorreu um erro ao processar a correção",
         customClass: {
           confirmButton:
             "bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro",

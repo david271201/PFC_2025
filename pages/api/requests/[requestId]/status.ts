@@ -40,6 +40,22 @@ function getNextStatus(currentStatus: RequestStatus, userRole: Role) {
     return "unauthorized";
   }
 
+  // Se está em NECESSITA_CORRECAO, procurar o próximo status após a correção
+  if (currentStatus === RequestStatus.NECESSITA_CORRECAO) {
+    const currentTransition = Object.entries(statusTransitions).find(
+      ([_, transition]) => transition?.requiredRole === userRole
+    );
+
+    if (currentTransition) {
+      const currentStatus = currentTransition[0] as RequestStatus;
+      const nextTransition = statusTransitions[currentStatus];
+      
+      if (nextTransition) {
+        return nextTransition.nextStatus;
+      }
+    }
+  }
+
   const { nextStatus, requiredRole } = statusTransitions[currentStatus] as {
     nextStatus: RequestStatus;
     previousStatus: RequestStatus | null;

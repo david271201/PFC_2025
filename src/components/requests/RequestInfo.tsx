@@ -122,11 +122,10 @@ const normalizeString = (text: string) =>
 
   const [isSearchingPacient, setIsSearchingPacient] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [totalCost, setTotalCost] = useState(0); // Estado para o custo total
-  const opmeCost = watch("opmeCost", 0); // Observa mudanças no custo OPME
-  const psaCost = watch("psaCost", 0); // Observa mudanças no custo PSA
+  const [totalCost, setTotalCost] = useState(request ? (request.opmeCost + (request.psaCost || 0)) : 0);
+  const opmeCost = watch("opmeCost", request?.opmeCost || 0);
+  const psaCost = watch("psaCost", request?.psaCost || 0);
 
-  
   useEffect(() => {
     // Atualiza o custo total sempre que opmeCost ou psaCost mudar
     setTotalCost(opmeCost + psaCost);
@@ -381,7 +380,7 @@ const normalizeString = (text: string) =>
         defaultValue={0}
         render={({ field }) => (
           <Input
-            label="Custo OCS/PSA Total"
+            label="Custo OCS/PSA"
             type="text"
             divClassname="col-span-2 row-start-4"
             value={formatCurrency(field.value)}
@@ -469,7 +468,52 @@ const normalizeString = (text: string) =>
       )}
       {request && request.status === RequestStatus.NECESSITA_CORRECAO && role === Role.OPERADOR_FUSEX && (
         <Button type="button" 
-        onClick={handleSubmit(submitConfirmation)}
+        onClick={handleSubmit(async (data) => {
+          const formData = new FormData();
+          Object.entries({ ...data, files: selectedFiles }).forEach(
+            ([key, value]) => {
+              if (key === "files") {
+                (value as File[]).forEach((file) => {
+                  formData.append("files", file);
+                });
+              } else if (key === "requestedOrganizations") {
+                formData.append(
+                  "requestedOrganizationIds[]",
+                  JSON.stringify(
+                    (value as { value: string; label: string }[]).map(
+                      (org) => org.value
+                    )
+                  )
+                );
+              } else if (key === "cbhpmCode") {
+                formData.append("cbhpmCode", (value as { id: string }).id);
+              } else if (typeof value === "boolean" || typeof value === "number") {
+                formData.append(key, value.toString());
+              } else {
+                formData.append(key, value as string);
+              }
+            }
+          );
+
+          const response = await fetch(`/api/requests/${request.id}/correction`, {
+            method: "PATCH",
+            body: formData,
+          });
+
+          if (response.ok) {
+            router.push("/solicitacoes");
+          } else {
+            Swal.fire({
+              title: "Erro",
+              text: "Ocorreu um erro ao enviar a correção",
+              icon: "error",
+              customClass: {
+                confirmButton:
+                  "bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro",
+              },
+            });
+          }
+        })}
         className="row-start-7" >
           Corrigir
         </Button>

@@ -38,10 +38,17 @@ export default function ActionCard({
         onClick={() => setIsOpen(!isOpen)}
         className={`flex w-full items-center justify-between rounded px-8 py-2 text-sm text-grafite hover:bg-gray-100 ${isOpen ? 'border-b-2 border-cinzaClaro' : ''}`}
       >
-        <div className="grid w-full grid-cols-[1fr_1fr_1fr]">
-          <span className="text-left font-semibold">{userName}</span>
-          <span className="text-left">{action.action}</span>
-          <span className="text-left">{formattedDate}</span>
+        <div className="grid w-full grid-cols-[2fr_3fr_2fr]">
+          <div className="text-left">
+            <span className="font-semibold">{userRole}</span>
+            <span className="text-sm text-gray-500 block">{action.userOrganization || 'N/A'}</span>
+          </div>
+          <span className={`text-left ${
+            action.action.toLowerCase().includes('favorável') ? 'text-green-600' : 
+            action.action.toLowerCase().includes('desfavorável') ? 'text-red-600' : 
+            'text-blue-600'
+          } font-medium`}>{action.action}</span>
+          <span className="text-left text-gray-500">{formattedDate}</span>
         </div>
         {isOpen ? (
           <ChevronUpIcon className="size-5 stroke-grafite" />
@@ -51,18 +58,38 @@ export default function ActionCard({
       </button>
       {isOpen && (
         <div className="flex items-center gap-6">
-          <div className="px-8 pb-8 pt-4">
-            <p>
-              <b>Função do usuário:</b> {userRole}, {action.userOrganization}
-            </p>
-            <p>
-              <b>Nome do usuário:</b> {userName}
-            </p>
-            <p>
-              <b>Data:</b> {formattedDate}
-            </p>
-            <p>
-              <b>Observação:</b> {action.observation || 'Sem Observação'}
+          <div className="px-8 pb-8 pt-4 w-full">
+            <div className="mb-4 border-b border-cinzaClaro pb-2">
+              <p className="mb-1">
+                <span className="font-semibold">Função do usuário:</span>{' '}
+                <span className="text-verde">{userRole}</span>
+              </p>
+              <p className="mb-1">
+                <span className="font-semibold">Organização:</span>{' '}
+                <span className="text-verde">{action.userOrganization || 'N/A'}</span>
+              </p>
+              <p>
+                <span className="font-semibold">Nome do usuário:</span>{' '}
+                <span className="text-verde">{userName}</span>
+              </p>
+            </div>
+            <div className="mb-4">
+              <p className="mb-2">
+                <span className="font-semibold">Parecer:</span>{' '}
+                <span className={`font-medium ${action.action.toLowerCase().includes('favorável') ? 'text-green-600' : action.action.toLowerCase().includes('desfavorável') ? 'text-red-600' : 'text-blue-600'}`}>
+                  {action.action}
+                </span>
+              </p>
+              {action.observation && (
+                <div className="rounded-lg bg-gray-50 p-4">
+                  <p className="font-semibold mb-2">Justificativa:</p>
+                  <p className="whitespace-pre-wrap text-gray-700">{action.observation}</p>
+                </div>
+              )}
+            </div>
+            <p className="text-sm text-gray-500">
+              <span className="font-semibold">Data do parecer:</span>{' '}
+              {formattedDate}
             </p>
           </div>
           {action.files && action.files.length > 0 && (

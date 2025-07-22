@@ -58,37 +58,44 @@ export default async function handle(
     if (filter === 'sent') {
       whereClause = {
         ...whereClause,
-        actions: {
-          some: {
-            userId,
+        OR: [
+          {
+            actions: {
+              some: {
+                userId,
+              },
+            },
+            // Para solicitações enviadas, excluímos aquelas que estão aguardando ação do usuário atual
+            status: {
+              not: {
+                in: Object.entries(statusTransitions)
+                      .filter(([_, transition]) => transition?.requiredRole === role)
+                      .map(([status]) => status as RequestStatus)
+              }
+            }
           },
-        },
-        // Para solicitações enviadas, excluímos aquelas que estão aguardando ação do usuário atual
-        status: {
-          not: {
-            in: Object.entries(statusTransitions)
-                  .filter(([_, transition]) => transition?.requiredRole === role)
-                  .map(([status]) => status as RequestStatus)
-                  .concat([RequestStatus.NECESSITA_CORRECAO])
-          }
-        }
+          // Incluir solicitações que necessitam correção nas enviadas para o OPERADOR_FUSEX
+          ...(role === 'OPERADOR_FUSEX' ? [{
+            status: RequestStatus.NECESSITA_CORRECAO,
+            senderId: dbUser.organizationId
+          }] : [])
+        ]
       };
     } else {
       // Para solicitações pendentes, incluímos apenas aquelas que precisam da ação do usuário atual
       whereClause = {
         ...whereClause,
-        OR: [
-          {
-            status: {
-              in: Object.entries(statusTransitions)
-                    .filter(([_, transition]) => transition?.requiredRole === role)
-                    .map(([status]) => status as RequestStatus)
-            }
-          },
-          {
+        status: {
+          in: Object.entries(statusTransitions)
+                .filter(([_, transition]) => transition?.requiredRole === role)
+                .map(([status]) => status as RequestStatus)
+        },
+        // Excluir NECESSITA_CORRECAO das pendentes para o OPERADOR_FUSEX
+        ...(role === 'OPERADOR_FUSEX' ? {
+          NOT: {
             status: RequestStatus.NECESSITA_CORRECAO
           }
-        ]
+        } : {})
       };
     }
 

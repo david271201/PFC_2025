@@ -68,18 +68,22 @@ export default function RequestPage({ role }: { role: Role }) {
             </Card>
           </Accordion.Body>
         </Accordion.Root>
-        {request?.requestActions && request.requestActions.length > 0 && (
-          <Accordion.Root>
-            <Accordion.Header>
-              <h2 className="text-xl font-bold text-grafite">
-                Histórico de ações
-              </h2>
-            </Accordion.Header>
-            <Accordion.Body>
+        <Accordion.Root startOpen>
+          <Accordion.Header>
+            <h2 className="text-xl font-bold text-grafite">
+              Histórico de Pareceres e Ações
+            </h2>
+          </Accordion.Header>
+          <Accordion.Body>
+            {request?.requestActions && request.requestActions.length > 0 ? (
               <ActionsTable actions={request.requestActions || []} />
-            </Accordion.Body>
-          </Accordion.Root>
-        )}
+            ) : (
+              <div className="flex w-full items-center justify-center p-4 text-gray-500">
+                Nenhum parecer ou ação registrada ainda
+              </div>
+            )}
+          </Accordion.Body>
+        </Accordion.Root>
         {request?.requestResponses &&
           request.requestResponses.length > 0 &&
           request?.status !== RequestStatus.AGUARDANDO_PASSAGEM && (

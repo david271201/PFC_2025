@@ -19,10 +19,15 @@ export default function ActionsTable({
     );
   }
 
+  // Ordenar ações por data, da mais recente para a mais antiga
+  const sortedActions = [...actions].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
   return (
     <Card>
       <div className="flex w-full flex-col items-center gap-5">
-        {actions.map((action) => (
+        {sortedActions.map((action) => (
           <ActionCard key={action.id} action={action} />
         ))}
       </div>
