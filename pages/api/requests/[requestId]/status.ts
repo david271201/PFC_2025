@@ -40,8 +40,22 @@ function getNextStatus(currentStatus: RequestStatus, userRole: Role) {
     return "unauthorized";
   }
 
-  // Se está em NECESSITA_CORRECAO, procurar o próximo status após a correção
+  // Se é OPERADOR_FUSEX, pode avançar ou corrigir em certos pontos do fluxo
+  if (userRole === Role.OPERADOR_FUSEX) {
+    // Se está aguardando resposta do HOMOLOGADOR_SOLICITADA_1, pode avançar ou pedir correção
+    if (currentStatus === RequestStatus.AGUARDANDO_HOMOLOGADOR_SOLICITADA_1) {
+      return RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_1;
+    }
+  }
+
+  // Se está em NECESSITA_CORRECAO, pode enviar para o próximo status
   if (currentStatus === RequestStatus.NECESSITA_CORRECAO) {
+    // Se for OPERADOR_FUSEX, volta para o CHEFE_FUSEX_1
+    if (userRole === Role.OPERADOR_FUSEX) {
+      return RequestStatus.AGUARDANDO_CHEFE_FUSEX_1;
+    }
+
+    // Para outros usuários, encontra o próximo status baseado no papel
     const currentTransition = Object.entries(statusTransitions).find(
       ([_, transition]) => transition?.requiredRole === userRole
     );

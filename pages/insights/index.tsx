@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { GetServerSidePropsContext } from 'next';
 import { auth } from '../../auth';
 import { checkPermission, UserType } from '@/permissions/utils';
+import { Role } from '@prisma/client';
 
 import Layout from '@/components/layout/Layout';
 import Card from '@/components/common/card';
@@ -500,8 +501,15 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   
   const { role } = session.user as UserType;
 
-  // Tornando a página acessível para todos os usuários autenticados
-  // Removida a verificação de permissão para tornar insights disponível para todos
+  // Verifica se o usuário é da DSAU (DRAS ou SUBDIRETOR_SAUDE)
+  if (role !== Role.DRAS && role !== Role.SUBDIRETOR_SAUDE) {
+    return {
+      redirect: {
+        destination: '/solicitacoes',
+        permanent: false,
+      },
+    };
+  }
 
   return {
     props: {},

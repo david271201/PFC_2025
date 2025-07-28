@@ -2,6 +2,12 @@ import { RequestStatus, Role } from '@prisma/client';
 import { statusTransitions } from './permissions/utils';
 
 /* eslint-disable import/prefer-default-export */
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
+}
 export function isStatusForRole(
   status: RequestStatus | undefined,
   role: Role | undefined,

@@ -90,6 +90,7 @@ model User {
   regionId               String?
   actions                ActionLog[]
   formulariosRegistrados FormularioMedico[] @relation("UserFormularioMedico")
+  custos                 Custo[]
 }
 
 model Organization {
@@ -219,4 +220,14 @@ model FormularioMedico {
   criadoPorId                  String
   createdAt                    DateTime @default(now())
   updatedAt                    DateTime @updatedAt
+}
+
+model Custo {
+  id          String   @id @default(uuid())
+  descricao   String
+  valor       Float
+  usuario     User     @relation(fields: [usuarioId], references: [id])
+  usuarioId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

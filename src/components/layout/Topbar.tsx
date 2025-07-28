@@ -41,13 +41,24 @@ export default function Topbar() {
             </button>
           )}
           
-          {/* Botão Insights - disponível para todos os usuários autenticados */}
+          {/* Botão Insights - apenas para DSAU */}
+          {(user?.role === Role.DRAS || user?.role === Role.SUBDIRETOR_SAUDE) && (
+            <button
+              type="button"
+              onClick={() => router.push('/insights')}
+              className={`rounded print:hidden ${pathname.includes('/insights') ? 'bg-verdeEscuro' : ''} px-2 py-1 text-white hover:bg-verdeEscuro`}
+            >
+              Insights
+            </button>
+          )}
+          
+          {/* Botão Custos */}
           <button
             type="button"
-            onClick={() => router.push('/insights')}
-            className={`rounded print:hidden ${pathname.includes('/insights') ? 'bg-verdeEscuro' : ''} px-2 py-1 text-white hover:bg-verdeEscuro`}
+            onClick={() => router.push('/custos')}
+            className={`rounded print:hidden ${pathname.includes('/custos') ? 'bg-verdeEscuro' : ''} px-2 py-1 text-white hover:bg-verdeEscuro`}
           >
-            Insights
+            Custos
           </button>
         </div>
       </div>
