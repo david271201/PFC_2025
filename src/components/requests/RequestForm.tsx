@@ -254,6 +254,13 @@ export default function RequestForm({
         onConfirm: () =>
           submitForm({ ...data, cancelUnfinishedResponses: true }),
       });
+    } else if (userRole === Role.OPERADOR_FUSEX) {
+      modal({
+        title: "Confirmar envio",
+        text: "Deseja enviar esta solicitação para o próximo agente do fluxo?",
+        icon: "question",
+        onConfirm: () => submitForm(data),
+      });
     } else {
       modal({
         onConfirm: () => submitForm(data),
@@ -264,7 +271,9 @@ export default function RequestForm({
   const confirmCorrection = (data: OpinionFormDataType) => {
     modal({
       title: "Devolver para correção",
-      text: "Deseja devolver este pedido para correção?",
+      text: userRole === Role.OPERADOR_FUSEX
+        ? "Deseja devolver esta solicitação para correção? Isto irá retornar a solicitação para o operador responsável."
+        : "Deseja devolver este pedido para correção?",
       icon: "warning",
       onConfirm: () => submitCorrection(data),
     });
@@ -281,15 +290,41 @@ export default function RequestForm({
       className="flex w-full flex-col gap-2"
     >
       {userRole === Role.OPERADOR_FUSEX ? (
-        <div className="mt-3">
-          <Button
-            color="danger"
-            onClick={confirmCancelation}
-            className="w-fit"
-          >
-            Cancelar Solicitação
-          </Button>
-        </div>
+        <>
+          <h2 className="text-xl font-bold text-grafite">Parecer</h2>
+          <Card>
+            <div className="flex w-full flex-col gap-2">
+              <div className="flex flex-col gap-1">
+                <span className="font-medium text-grafite">Observações</span>
+                <textarea
+                  placeholder="Digite suas observações aqui..."
+                  rows={3}
+                  className="w-full rounded border border-gray-300 px-2 text-grafite focus:outline-0 focus:ring focus:ring-verde"
+                  {...register("observation")}
+                />
+              </div>
+            </div>
+          </Card>
+          <div className="mt-3 flex items-center gap-4">
+            <Button type="submit" className="max-w-40">
+              Enviar para o próximo
+            </Button>
+            <Button
+              color="secondary"
+              onClick={handleSubmit(confirmCorrection)}
+              className="w-fit"
+            >
+              Devolver para correção
+            </Button>
+            <Button
+              color="danger"
+              onClick={confirmCancelation}
+              className="w-fit"
+            >
+              Cancelar Solicitação
+            </Button>
+          </div>
+        </>
       ) : status === RequestStatus.NECESSITA_CORRECAO ? (
         <>
           <h2 className="text-xl font-bold text-grafite">Corrigir Solicitação</h2>
