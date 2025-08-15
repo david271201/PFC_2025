@@ -67,6 +67,13 @@ export default async function handle(
             name: true,
           },
         },
+        formulariosRegistrados: {
+          select: {
+            id: true,
+            consultaExame: true,
+            createdAt: true
+          }
+        },
         requestResponses: {
           where: responsesFilter,
           include: {

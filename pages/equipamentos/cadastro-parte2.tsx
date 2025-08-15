@@ -51,6 +51,7 @@ type FormularioMedicoParte1Data = {
 export default function FormularioMedicoParte2() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { requestId } = router.query; // Captura o ID da solicitação da URL
 
   const {
     register,
@@ -73,34 +74,69 @@ export default function FormularioMedicoParte2() {
     setIsSubmitting(true);
     
     try {
-      // Enviar para a API apenas os dados da parte 2
-      const response = await fetch('/api/formularios-medicos', {
+      if (!requestId) {
+        throw new Error('ID da solicitação não fornecido');
+      }
+      
+      // Enviar para a API de cadastro com o ID da solicitação
+      const formularioResponse = await fetch('/api/formularios-medicos/cadastrar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          // Dados do beneficiário (obrigatórios na estrutura)
+          nomeBeneficiario: "Formulário Parte 2 - RM Destino",
+          precCpMatriculaCpf: "N/A",
+          idade: "N/A",
+          postoGraduacaoTitular: "N/A",
+          necessitaAcompanhante: false,
+          consultaExame: "N/A",
+          
+          // Campos da parte 2
           ...data,
+          
+          // ID da solicitação e parte do formulário
+          requestId: requestId as string,
           parte: 'RM_DESTINO'
         }),
       });
 
-      if (response.ok) {
-        Swal.fire({
-          title: 'Sucesso',
-          text: 'Formulário médico enviado com sucesso',
-          icon: 'success',
-          customClass: {
-            confirmButton:
-              'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
-          },
-        }).then(() => {
-          router.push('/solicitacoes');
-        });
-      } else {
-        const error = await response.json();
+      if (!formularioResponse.ok) {
+        const error = await formularioResponse.json();
         throw new Error(error.message || 'Erro ao enviar formulário médico');
       }
+      
+      const formularioData = await formularioResponse.json();
+      
+      // Atualizar o fluxo da solicitação através da API de avaliação
+      const avaliacaoResponse = await fetch('/api/avaliacoes/chefe-secao-regional', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requestId: requestId,
+          formularioId: formularioData.id
+        }),
+      });
+      
+      if (!avaliacaoResponse.ok) {
+        const error = await avaliacaoResponse.json();
+        throw new Error(error.message || 'Erro ao atualizar status da solicitação');
+      }
+
+      Swal.fire({
+        title: 'Sucesso',
+        text: 'Formulário médico enviado com sucesso e avaliação concluída',
+        icon: 'success',
+        customClass: {
+          confirmButton:
+            'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+        },
+      }).then(() => {
+        router.push('/solicitacoes');
+      });
     } catch (error) {
       Swal.fire({
         title: 'Erro',

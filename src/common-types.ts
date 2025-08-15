@@ -35,6 +35,11 @@ export type TRequestResponseWithReceiver = RequestResponse & {
 
 export type TRequestInfoWithResponses = TRequestInfo & {
   requestResponses?: TRequestResponseWithReceiver[];
+  formulariosRegistrados?: Array<{
+    id: string;
+    consultaExame: string;
+    createdAt: string;
+  }>;
 };
 
 export type TRequestResponseWithRequestInfo = RequestResponse & {

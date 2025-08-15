@@ -15,6 +15,8 @@ import ResponsesTable from '@/components/responses/ResponsesTable';
 import { useMemo } from 'react';
 import RequestForm from '@/components/requests/RequestForm';
 import ActionsTable from '@/components/actions/ActionsTable';
+import FormularioActionButton from '@/components/requests/FormularioActionButton';
+import FormularioViewLink from '@/components/requests/FormularioViewLink';
 
 export default function RequestPage({ role }: { role: Role }) {
   const router = useRouter();
@@ -56,6 +58,20 @@ export default function RequestPage({ role }: { role: Role }) {
             Status: {request.status.replaceAll('_', ' ').replace(/\d/g, '')}
           </h2>
         )}
+        {/* Botão para preencher formulário médico (aparece apenas para Chefe da Divisão de Medicina ou Chefe da Seção Regional) */}
+        {requestId && (
+          <FormularioActionButton
+            requestId={requestId as string}
+            userRole={role}
+            requestStatus={request?.status || ''}
+          />
+        )}
+
+        {/* Link para visualizar formulários médicos (aparece se houver formulários) */}
+        {request?.formulariosRegistrados && request.formulariosRegistrados.length > 0 && (
+          <FormularioViewLink requestId={requestId as string} />
+        )}
+
         <Accordion.Root startOpen>
           <Accordion.Header>
             <h2 className="text-xl font-bold text-grafite">
