@@ -320,31 +320,55 @@ export default async function handle(
       return res.status(200).json(undefined);
     }
 
-    // Checar se as OM são da mesma região militar ou não para ver se precisa mandar para DSau
+    // Verificar CHEM_2 para decisão baseada na região
     if (request.status === RequestStatus.AGUARDANDO_CHEM_2) {
-      const selectedResponse = await prisma.requestResponse.findUnique({
-        where: {
-          id: request.requestResponses.find((response) => response.selected)
-            ?.id,
-        },
-        select: {
-          receiver: {
-            select: {
-              regionId: true,
+      // Verificar se há resposta selecionada para CHEM_2
+      let selectedResponseId = request.requestResponses.find((response) => response.selected)?.id;
+      
+      // Se não há resposta selecionada, tentamos encontrar uma válida
+      if (!selectedResponseId && request.requestResponses.length > 0) {
+        const validResponse = request.requestResponses.find(
+          (response) => 
+            response.status !== RequestStatus.CANCELADO && 
+            response.status !== RequestStatus.REPROVADO &&
+            response.status !== RequestStatus.REPROVADO_DSAU
+        );
+        
+        if (validResponse) {
+          selectedResponseId = validResponse.id;
+          // Marcar esta resposta como selecionada
+          await prisma.requestResponse.update({
+            where: { id: selectedResponseId },
+            data: { selected: true }
+          });
+        }
+      }
+      
+      // Verificar região para CHEM_2 se tiver resposta selecionada
+      if (selectedResponseId) {
+        const selectedResponse = await prisma.requestResponse.findUnique({
+          where: {
+            id: selectedResponseId,
+          },
+          select: {
+            receiver: {
+              select: {
+                regionId: true,
+              },
             },
           },
-        },
-      });
-
-      if (!selectedResponse) {
-        return res.status(400).json({
-          message: "Nenhuma OM selecionada",
         });
-      }
 
-      if (selectedResponse.receiver.regionId === request.sender.regionId) {
-        nextStatus = RequestStatus.APROVADO;
+        if (selectedResponse && selectedResponse.receiver.regionId === request.sender.regionId) {
+          nextStatus = RequestStatus.APROVADO;
+        }
       }
+    }
+    
+    // Para CHEM_3, sempre direcionar para CHEFE_DIV_MEDICINA_4
+    if (request.status === RequestStatus.AGUARDANDO_CHEM_3) {
+      // Definimos o próximo status diretamente
+      nextStatus = RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4;
     }
 
     await prisma.$transaction(async (tx) => {

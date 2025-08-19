@@ -156,8 +156,13 @@ export const statusTransitions: Record<
     previousStatus: RequestStatus.AGUARDANDO_OPERADOR_SECAO_REGIONAL,
     requiredRole: Role.CHEFE_SECAO_REGIONAL,
   },
+  // [RequestStatus.AGUARDANDO_CHEM_2]: {
+  //   nextStatus: RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_1,
+  //   previousStatus: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_2,
+  //   requiredRole: Role.CHEM,
+  // },
   [RequestStatus.AGUARDANDO_CHEM_2]: {
-    nextStatus: RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_1,
+    nextStatus: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
     previousStatus: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_2,
     requiredRole: Role.CHEM,
   },
@@ -177,9 +182,14 @@ export const statusTransitions: Record<
     requiredRole: Role.SUBDIRETOR_SAUDE,
   },
   [RequestStatus.AGUARDANDO_CHEM_3]: {
-    nextStatus: RequestStatus.APROVADO,
+    nextStatus: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
     previousStatus: RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_2,
     requiredRole: Role.CHEM,
+  },
+  [RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4]: {
+    nextStatus: RequestStatus.APROVADO,
+    previousStatus: RequestStatus.AGUARDANDO_CHEM_3,
+    requiredRole: Role.CHEFE_DIV_MEDICINA,
   },
   [RequestStatus.APROVADO]: null,
   [RequestStatus.REPROVADO]: null,
