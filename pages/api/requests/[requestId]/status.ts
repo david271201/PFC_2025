@@ -48,12 +48,6 @@ function getNextStatus(currentStatus: RequestStatus, userRole: Role) {
     }
   }
   
-  // Para CHEM_2, vamos verificar a região mais tarde no código,
-  // então aqui apenas retornamos o próximo status conforme definido em statusTransitions
-  if (currentStatus === RequestStatus.AGUARDANDO_CHEM_2 && userRole === Role.CHEM) {
-    return statusTransitions[currentStatus]?.nextStatus || "unauthorized";
-  }
-  
   // Para CHEFE_SECAO_REGIONAL_3, verificamos se o papel do usuário é o correto
   if (currentStatus === RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3 && userRole === Role.CHEFE_SECAO_REGIONAL) {
     return statusTransitions[currentStatus]?.nextStatus || "unauthorized";
@@ -336,94 +330,92 @@ export default async function handle(
       return res.status(200).json(undefined);
     }
 
-    // Verificar CHEM_2 para decisão baseada na região
-    if (request.status === RequestStatus.AGUARDANDO_CHEM_2) {
-      // Verificar se há resposta selecionada para CHEM_2
-      let selectedResponseId = request.requestResponses.find((response) => response.selected)?.id;
+    // Tratamento para CHEM_2 - apenas para configurar a response correta quando vai para CHEFE_DIV_MEDICINA_4
+    if (request.status === RequestStatus.AGUARDANDO_CHEM_2 && nextStatus === RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4) {
+      // Buscar a OMS de referência da região do remetente (normalmente teria usuários CHEFE_DIV_MEDICINA)
+      const senderRegionId = request.sender?.regionId;
       
-      // Se não há resposta selecionada, tentamos encontrar uma válida
-      if (!selectedResponseId && request.requestResponses.length > 0) {
-        const validResponse = request.requestResponses.find(
-          (response) => 
-            response.status !== RequestStatus.CANCELADO && 
-            response.status !== RequestStatus.REPROVADO &&
-            response.status !== RequestStatus.REPROVADO_DSAU
-        );
+      if (senderRegionId) {
+        // Buscar todas as organizações da região do remetente
+        const organizationsInRegion = await prisma.organization.findMany({
+          where: {
+            regionId: senderRegionId,
+          },
+          select: {
+            id: true,
+            name: true,
+            users: {
+              where: {
+                role: Role.CHEFE_DIV_MEDICINA
+              },
+              select: {
+                id: true
+              }
+            }
+          }
+        });
         
-        if (validResponse) {
-          selectedResponseId = validResponse.id;
-          // Marcar esta resposta como selecionada
-          await prisma.requestResponse.update({
-            where: { id: selectedResponseId },
-            data: { selected: true }
+        // Encontrar a organização com usuários CHEFE_DIV_MEDICINA (que seria a OMS de referência)
+        const referenceOrg = organizationsInRegion.find(org => org.users.length > 0);
+        
+        if (referenceOrg) {
+          console.log('Configurando OMS de referência para CHEFE_DIV_MEDICINA_4:', referenceOrg.name);
+          
+          // Buscar ou criar uma resposta para a OMS de referência
+          let refResponse = await prisma.requestResponse.findFirst({
+            where: {
+              requestId: requestId as string,
+              receiverId: referenceOrg.id,
+            },
           });
-        }
-      }
-      
-      // Verificar região para CHEM_2 se tiver resposta selecionada
-      if (selectedResponseId) {
-        // Buscar resposta selecionada com todos os detalhes necessários
-        const detailedResponse = await prisma.requestResponse.findUnique({
-          where: {
-            id: selectedResponseId,
-          },
-          select: {
-            id: true,
-            receiver: {
-              select: {
-                id: true,
-                regionId: true,
-                name: true,
+          
+          // Se não existir, criar uma nova resposta para a OMS de referência
+          if (!refResponse) {
+            refResponse = await prisma.requestResponse.create({
+              data: {
+                requestId: requestId as string,
+                receiverId: referenceOrg.id,
+                selected: false,
+                status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4, // Definir o status correto
               },
+            });
+          }
+          
+          // Desmarcar todas as respostas anteriores
+          await prisma.requestResponse.updateMany({
+            where: {
+              requestId: requestId as string,
             },
-          },
-        });
-        
-        // Buscar os detalhes completos do request para ter certeza que temos o regionId do sender
-        const detailedRequest = await prisma.request.findUnique({
-          where: {
-            id: requestId as string,
-          },
-          select: {
-            id: true,
-            sender: {
-              select: {
-                id: true,
-                regionId: true,
-                name: true,
-              },
+            data: {
+              selected: false,
             },
-          },
-        });
-        
-        // Debug para verificar os valores envolvidos na comparação
-        console.log('CHEM_2 debug detalhado:', {
-          detailedResponseReceiverId: detailedResponse?.receiver?.id,
-          detailedResponseReceiverName: detailedResponse?.receiver?.name,
-          detailedResponseRegionId: detailedResponse?.receiver?.regionId,
-          detailedRequestSenderId: detailedRequest?.sender?.id,
-          detailedRequestSenderName: detailedRequest?.sender?.name,
-          detailedRequestSenderRegionId: detailedRequest?.sender?.regionId,
-          isMatch: detailedResponse?.receiver?.regionId === detailedRequest?.sender?.regionId
-        });
-
-        // Usar os dados detalhados para a comparação
-        if (detailedResponse && detailedRequest && 
-            detailedResponse.receiver.regionId === detailedRequest.sender.regionId) {
-          // Se for da mesma região, aprova direto
-          nextStatus = RequestStatus.APROVADO;
-          console.log('CHEM_2: Aprovando direto pois é da mesma região:', 
-                      detailedResponse.receiver.regionId, '===', detailedRequest.sender.regionId);
+          });
+          
+          // Marcar a resposta da OMS de referência como selecionada e atualizar o status
+          await prisma.requestResponse.update({
+            where: { id: refResponse.id },
+            data: { 
+              selected: true,
+              status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4, // Garantir que o status esteja correto
+            },
+          });
+          
+          // Atualizar o status de todas as outras respostas para AGUARDANDO_CHEFE_DIV_MEDICINA_4
+          // Isso é necessário para que não apareçam como APROVADO
+          await prisma.requestResponse.updateMany({
+            where: {
+              requestId: requestId as string,
+              NOT: {
+                id: refResponse.id
+              }
+            },
+            data: {
+              status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4
+            },
+          });
         } else {
-          // Se for de regiões diferentes, manda para CHEFE_DIV_MEDICINA_4
-          nextStatus = RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4;
-          console.log('CHEM_2: Encaminhando para CHEFE_DIV_MEDICINA_4 pois é de região diferente:', 
-                      detailedResponse?.receiver?.regionId, '!==', detailedRequest?.sender?.regionId);
+          console.log('Não foi possível encontrar uma OMS de referência com CHEFE_DIV_MEDICINA na região', senderRegionId);
         }
-      } else {
-        // Se não tiver resposta selecionada, segue o fluxo normal definido em statusTransitions
-        nextStatus = getNextStatus(request.status, role) as RequestStatus;
-        console.log('CHEM_2: Sem resposta selecionada, seguindo fluxo normal para', nextStatus);
       }
     }
     
@@ -464,6 +456,7 @@ export default async function handle(
         );
       }
 
+      // Atualizar o status da solicitação principal
       await tx.request.update({
         where: {
           id: requestId as string,
@@ -472,6 +465,20 @@ export default async function handle(
           status: nextStatus as RequestStatus,
         },
       });
+      
+      // Se estamos atualizando para um status de AGUARDANDO_CHEFE_DIV_MEDICINA_4, atualizar também
+      // todas as respostas selecionadas para o mesmo status
+      if (nextStatus === RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4) {
+        await tx.requestResponse.updateMany({
+          where: {
+            requestId: requestId as string,
+            selected: true
+          },
+          data: {
+            status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4
+          }
+        });
+      }
     });
 
     return res.status(200).json(undefined);

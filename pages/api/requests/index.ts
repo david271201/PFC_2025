@@ -82,36 +82,186 @@ export default async function handle(
         ]
       };
     } else {
-      // Para solicitações pendentes, incluímos apenas aquelas que precisam da ação do usuário atual
-      whereClause = {
-        ...whereClause,
-        status: {
-          in: Object.entries(statusTransitions)
-                .filter(([_, transition]) => transition?.requiredRole === role)
-                .map(([status]) => status as RequestStatus)
-        },
-        // Excluir NECESSITA_CORRECAO das pendentes para o OPERADOR_FUSEX
-        ...(role === 'OPERADOR_FUSEX' ? {
-          NOT: {
-            status: RequestStatus.NECESSITA_CORRECAO
+      // Tratamento especial para CHEFE_DIV_MEDICINA_4
+      if (role === 'CHEFE_DIV_MEDICINA' && dbUser.organizationId) {
+        // Para solicitações AGUARDANDO_CHEFE_DIV_MEDICINA_4, só mostrar se a organização do usuário
+        // for a receptora selecionada
+        whereClause = {
+          OR: [
+            // Opção 1: Status da solicitação é AGUARDANDO_CHEFE_DIV_MEDICINA_4
+            // e a organização do usuário é a receptora selecionada e o status da resposta é AGUARDANDO_CHEFE_DIV_MEDICINA_4
+            {
+              status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
+              requestResponses: {
+                some: {
+                  receiverId: dbUser.organizationId,
+                  selected: true,
+                  status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4
+                }
+              }
+            },
+            // Opção 2: Backup - Mostra solicitações com status AGUARDANDO_CHEFE_DIV_MEDICINA_4 
+            // que têm uma resposta para esta organização, mesmo que o status da resposta não esteja correto
+            // Isso é uma segurança para casos onde o status da resposta não foi atualizado
+            {
+              status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
+              requestResponses: {
+                some: {
+                  receiverId: dbUser.organizationId,
+                  selected: true,
+                  // Não filtramos por status nesse caso como backup
+                }
+              }
+            }
+          ]
+        };
+      }
+      // Tratamento especial para CHEFE_SECAO_REGIONAL_3 (semelhante ao CHEFE_DIV_MEDICINA_4)
+      else if (role === 'CHEFE_SECAO_REGIONAL' && dbUser.organizationId) {
+        // Para solicitações AGUARDANDO_CHEFE_SECAO_REGIONAL_3, só mostrar se a organização do usuário
+        // for a receptora
+        whereClause = {
+          OR: [
+            // Opção 1: Status da solicitação é AGUARDANDO_CHEFE_SECAO_REGIONAL_3
+            // e a organização do usuário é a receptora e o status da resposta é correto
+            {
+              status: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3,
+              requestResponses: {
+                some: {
+                  receiverId: dbUser.organizationId,
+                  status: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3
+                }
+              }
+            },
+            // Opção 2: Backup - Status da solicitação é AGUARDANDO_CHEFE_SECAO_REGIONAL_3
+            // independente do status da resposta (para garantir que mostre mesmo se houver inconsistência)
+            {
+              status: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3,
+              requestResponses: {
+                some: {
+                  receiverId: dbUser.organizationId
+                }
+              }
+            }
+          ]
+        };
+        
+        console.log("Filtro para CHEFE_DIV_MEDICINA_4:", whereClause);
+        
+        // Log detalhado para depuração do status
+        const debugRequests = await prisma.request.findMany({
+          where: {
+            status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4
+          },
+          include: {
+            requestResponses: {
+              where: {
+                receiverId: dbUser.organizationId
+              },
+              select: {
+                id: true,
+                selected: true,
+                status: true,
+                receiverId: true
+              }
+            }
           }
-        } : {})
-      };
+        });
+        
+        console.log(`DEBUG: Encontradas ${debugRequests.length} solicitações com status AGUARDANDO_CHEFE_DIV_MEDICINA_4`);
+        debugRequests.forEach(req => {
+          console.log(`- Request ${req.id}, status: ${req.status}, respostas para org ${dbUser.organizationId}:`, 
+            req.requestResponses.map(r => `${r.id} (selected: ${r.selected}, status: ${r.status})`));
+        });
+      } else if (role === 'CHEFE_SECAO_REGIONAL' && dbUser.organizationId) {
+        console.log("Filtro para CHEFE_SECAO_REGIONAL_3:", whereClause);
+        
+        // Log detalhado para depuração do status CHEFE_SECAO_REGIONAL_3
+        const debugRequests = await prisma.request.findMany({
+          where: {
+            status: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3
+          },
+          include: {
+            requestResponses: {
+              where: {
+                receiverId: dbUser.organizationId
+              },
+              select: {
+                id: true,
+                selected: true,
+                status: true,
+                receiverId: true
+              }
+            }
+          }
+        });
+        
+        console.log(`DEBUG: Encontradas ${debugRequests.length} solicitações com status AGUARDANDO_CHEFE_SECAO_REGIONAL_3`);
+        debugRequests.forEach(req => {
+          console.log(`- Request ${req.id}, status: ${req.status}, respostas para org ${dbUser.organizationId}:`, 
+            req.requestResponses.map(r => `${r.id} (selected: ${r.selected}, status: ${r.status})`));
+        });
+      } else {
+        // Para outros papéis, usamos a lógica original
+        whereClause = {
+          ...whereClause,
+          status: {
+            in: Object.entries(statusTransitions)
+                  .filter(([_, transition]) => transition?.requiredRole === role)
+                  .map(([status]) => status as RequestStatus)
+          },
+          // Excluir NECESSITA_CORRECAO das pendentes para o OPERADOR_FUSEX
+          ...(role === 'OPERADOR_FUSEX' ? {
+            NOT: {
+              status: RequestStatus.NECESSITA_CORRECAO
+            }
+          } : {})
+        };
+      }
     }
 
+    // Adicionar campos para depuração em ambientes de desenvolvimento
+    const isDevEnv = process.env.NODE_ENV === 'development';
+    
     const requests = await prisma.request.findMany({
       where: whereClause,
       include: {
         sender: {
           select: {
+            id: true,
             name: true,
           },
         },
+        requestResponses: {
+          where: {
+            selected: true
+          },
+          select: {
+            id: true,
+            receiverId: true,
+            selected: true,
+            receiver: {
+              select: {
+                id: true,
+                name: true,
+              }
+            }
+          }
+        }
       },
       orderBy: {
         updatedAt: 'desc',
       },
     });
+    
+    // Log para ajudar na depuração
+    if (isDevEnv && role === 'CHEFE_DIV_MEDICINA') {
+      console.log(`Solicitações para CHEFE_DIV_MEDICINA (org ${dbUser.organizationId}):`);
+      requests.forEach(req => {
+        const selectedResponse = req.requestResponses?.[0];
+        console.log(`- Request ${req.id}, status: ${req.status}, org receptora: ${selectedResponse?.receiver?.name} (${selectedResponse?.receiverId})`);
+      });
+    }
 
     return res.status(200).json(requests);
   }

@@ -219,8 +219,35 @@ export default async function handle(
           status: nextStatus as RequestStatus,
         },
       });
-
-      if (nextStatus === RequestStatus.APROVADO && allResponsesFinished) {
+      
+      // Caso especial para CHEFE_DIV_MEDICINA_4 -> CHEFE_SECAO_REGIONAL_3
+      if (requestResponse.status === RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4 && 
+          nextStatus === RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3 && 
+          role === Role.CHEFE_DIV_MEDICINA) {
+        
+        console.log('Atualizando solicitação de CHEFE_DIV_MEDICINA_4 para CHEFE_SECAO_REGIONAL_3');
+        
+        // Atualizamos o status da solicitação principal
+        await tx.request.update({
+          where: {
+            id: requestResponse.requestId,
+          },
+          data: {
+            status: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3,
+          },
+        });
+        
+        // Também atualizamos todas as respostas para manterem o mesmo status
+        await tx.requestResponse.updateMany({
+          where: {
+            requestId: requestResponse.requestId,
+          },
+          data: {
+            status: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3,
+          },
+        });
+      }
+      else if (nextStatus === RequestStatus.APROVADO && allResponsesFinished) {
         await tx.request.update({
           where: {
             id: requestResponse.requestId,
