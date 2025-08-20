@@ -166,9 +166,19 @@ export const statusTransitions: Record<
     previousStatus: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_2,
     requiredRole: Role.CHEM,
   },
+  [RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4]: {
+    nextStatus: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3,
+    previousStatus: RequestStatus.AGUARDANDO_CHEM_2,
+    requiredRole: Role.CHEFE_DIV_MEDICINA,
+  },
+  [RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3]: {
+    nextStatus: RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_1,
+    previousStatus: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
+    requiredRole: Role.CHEFE_SECAO_REGIONAL,
+  },
   [RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_1]: {
     nextStatus: RequestStatus.AGUARDANDO_DRAS,
-    previousStatus: RequestStatus.AGUARDANDO_CHEM_2,
+    previousStatus: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3,
     requiredRole: Role.SUBDIRETOR_SAUDE,
   },
   [RequestStatus.AGUARDANDO_DRAS]: {
@@ -177,20 +187,12 @@ export const statusTransitions: Record<
     requiredRole: Role.DRAS,
   },
   [RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_2]: {
-    nextStatus: RequestStatus.AGUARDANDO_CHEM_3,
+    nextStatus: RequestStatus.APROVADO,
     previousStatus: RequestStatus.AGUARDANDO_DRAS,
     requiredRole: Role.SUBDIRETOR_SAUDE,
   },
-  [RequestStatus.AGUARDANDO_CHEM_3]: {
-    nextStatus: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
-    previousStatus: RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_2,
-    requiredRole: Role.CHEM,
-  },
-  [RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4]: {
-    nextStatus: RequestStatus.APROVADO,
-    previousStatus: RequestStatus.AGUARDANDO_CHEM_3,
-    requiredRole: Role.CHEFE_DIV_MEDICINA,
-  },
+  // Status obsoleto - mantido apenas para compatibilidade
+  [RequestStatus.AGUARDANDO_CHEM_3]: null,
   [RequestStatus.APROVADO]: null,
   [RequestStatus.REPROVADO]: null,
   [RequestStatus.REPROVADO_DSAU]: {

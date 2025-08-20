@@ -47,6 +47,17 @@ function getNextStatus(currentStatus: RequestStatus, userRole: Role) {
       return RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_1;
     }
   }
+  
+  // Para CHEM_2, vamos verificar a região mais tarde no código,
+  // então aqui apenas retornamos o próximo status conforme definido em statusTransitions
+  if (currentStatus === RequestStatus.AGUARDANDO_CHEM_2 && userRole === Role.CHEM) {
+    return statusTransitions[currentStatus]?.nextStatus || "unauthorized";
+  }
+  
+  // Para CHEFE_SECAO_REGIONAL_3, verificamos se o papel do usuário é o correto
+  if (currentStatus === RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3 && userRole === Role.CHEFE_SECAO_REGIONAL) {
+    return statusTransitions[currentStatus]?.nextStatus || "unauthorized";
+  }
 
   // Se está em NECESSITA_CORRECAO, pode enviar para o próximo status
   if (currentStatus === RequestStatus.NECESSITA_CORRECAO) {
@@ -113,6 +124,11 @@ export default async function handle(
           id: true,
           status: true,
           selected: true,
+          receiver: {
+            select: {
+              regionId: true,
+            },
+          },
         },
       },
     },
@@ -346,29 +362,75 @@ export default async function handle(
       
       // Verificar região para CHEM_2 se tiver resposta selecionada
       if (selectedResponseId) {
-        const selectedResponse = await prisma.requestResponse.findUnique({
+        // Buscar resposta selecionada com todos os detalhes necessários
+        const detailedResponse = await prisma.requestResponse.findUnique({
           where: {
             id: selectedResponseId,
           },
           select: {
+            id: true,
             receiver: {
               select: {
+                id: true,
                 regionId: true,
+                name: true,
               },
             },
           },
         });
+        
+        // Buscar os detalhes completos do request para ter certeza que temos o regionId do sender
+        const detailedRequest = await prisma.request.findUnique({
+          where: {
+            id: requestId as string,
+          },
+          select: {
+            id: true,
+            sender: {
+              select: {
+                id: true,
+                regionId: true,
+                name: true,
+              },
+            },
+          },
+        });
+        
+        // Debug para verificar os valores envolvidos na comparação
+        console.log('CHEM_2 debug detalhado:', {
+          detailedResponseReceiverId: detailedResponse?.receiver?.id,
+          detailedResponseReceiverName: detailedResponse?.receiver?.name,
+          detailedResponseRegionId: detailedResponse?.receiver?.regionId,
+          detailedRequestSenderId: detailedRequest?.sender?.id,
+          detailedRequestSenderName: detailedRequest?.sender?.name,
+          detailedRequestSenderRegionId: detailedRequest?.sender?.regionId,
+          isMatch: detailedResponse?.receiver?.regionId === detailedRequest?.sender?.regionId
+        });
 
-        if (selectedResponse && selectedResponse.receiver.regionId === request.sender.regionId) {
+        // Usar os dados detalhados para a comparação
+        if (detailedResponse && detailedRequest && 
+            detailedResponse.receiver.regionId === detailedRequest.sender.regionId) {
+          // Se for da mesma região, aprova direto
           nextStatus = RequestStatus.APROVADO;
+          console.log('CHEM_2: Aprovando direto pois é da mesma região:', 
+                      detailedResponse.receiver.regionId, '===', detailedRequest.sender.regionId);
+        } else {
+          // Se for de regiões diferentes, manda para CHEFE_DIV_MEDICINA_4
+          nextStatus = RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4;
+          console.log('CHEM_2: Encaminhando para CHEFE_DIV_MEDICINA_4 pois é de região diferente:', 
+                      detailedResponse?.receiver?.regionId, '!==', detailedRequest?.sender?.regionId);
         }
+      } else {
+        // Se não tiver resposta selecionada, segue o fluxo normal definido em statusTransitions
+        nextStatus = getNextStatus(request.status, role) as RequestStatus;
+        console.log('CHEM_2: Sem resposta selecionada, seguindo fluxo normal para', nextStatus);
       }
     }
     
-    // Para CHEM_3, sempre direcionar para CHEFE_DIV_MEDICINA_4
-    if (request.status === RequestStatus.AGUARDANDO_CHEM_3) {
+    // Para CHEFE_SECAO_REGIONAL_3, sempre direcionar para SUBDIRETOR_SAUDE_1
+    if (request.status === RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3) {
       // Definimos o próximo status diretamente
-      nextStatus = RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4;
+      nextStatus = RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_1;
     }
 
     await prisma.$transaction(async (tx) => {

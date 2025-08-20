@@ -83,6 +83,9 @@ export default function FormularioMedicoParte1() {
       }
       
       // Enviar para a API de cadastro com o ID da solicitação
+      // Isso salva os dados na tabela FormularioMedico com referência à solicitação (requestId)
+      // Mesmo quando a organização A (remetente) envia uma solicitação para a organização B (receptora),
+      // os dados do formulário ficam associados à solicitação original
       const formularioResponse = await fetch('/api/formularios-medicos/cadastrar', {
         method: 'POST',
         headers: {
@@ -90,8 +93,8 @@ export default function FormularioMedicoParte1() {
         },
         body: JSON.stringify({
           ...data,
-          requestId: requestId as string,
-          parte: 'OMS_DESTINO'
+          requestId: requestId as string, // Vincula o formulário à solicitação original
+          parte: 'OMS_DESTINO' // Indica que este formulário é da OMS de destino (organização B)
         }),
       });
 
@@ -103,14 +106,16 @@ export default function FormularioMedicoParte1() {
       const formularioData = await formularioResponse.json();
       
       // Atualizar o fluxo da solicitação através da API de avaliação
+      // Este endpoint irá atualizar o status da solicitação para o próximo na sequência
+      // A solicitação mantém a organização B como receptora (quando em AGUARDANDO_CHEFE_DIV_MEDICINA_4)
       const avaliacaoResponse = await fetch('/api/avaliacoes/chefe-div-medicina', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          requestId: requestId,
-          formularioId: formularioData.id
+          requestId: requestId, // ID da solicitação original
+          formularioId: formularioData.id // ID do formulário recém-criado
         }),
       });
       
