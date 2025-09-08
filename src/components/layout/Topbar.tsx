@@ -38,19 +38,7 @@ export default function Topbar() {
               className={`rounded print:hidden ${pathname.includes('/estatisticas') ? 'bg-verdeEscuro' : ''} px-2 py-1 text-white hover:bg-verdeEscuro`}
             >
               Estatísticas
-            </button>
-          )}
-          
-          {/* Botão Insights - apenas para DSAU */}
-          {(user?.role === Role.DRAS || user?.role === Role.SUBDIRETOR_SAUDE) && (
-            <button
-              type="button"
-              onClick={() => router.push('/insights')}
-              className={`rounded print:hidden ${pathname.includes('/insights') ? 'bg-verdeEscuro' : ''} px-2 py-1 text-white hover:bg-verdeEscuro`}
-            >
-              Insights
-            </button>
-          )}
+            </button>          )}
           
           {/* Botão Custos */}
           <button

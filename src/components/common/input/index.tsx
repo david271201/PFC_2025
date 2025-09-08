@@ -7,7 +7,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export function formatCurrency(value: number) {
   const intValue = value || 0;
-  return (intValue / 100).toLocaleString('pt-BR', {
+  return (intValue / 1000).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
     minimumFractionDigits: 2,
