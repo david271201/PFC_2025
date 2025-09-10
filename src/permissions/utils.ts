@@ -192,7 +192,7 @@ export const statusTransitions: Record<
     requiredRole: Role.SUBDIRETOR_SAUDE,
   },
   // Status obsoleto - mantido apenas para compatibilidade
-  [RequestStatus.AGUARDANDO_CHEM_3]: null,
+  // [RequestStatus.AGUARDANDO_CHEM_3]: null,
   [RequestStatus.APROVADO]: null,
   [RequestStatus.REPROVADO]: null,
   [RequestStatus.REPROVADO_DSAU]: {
