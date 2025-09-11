@@ -35,6 +35,9 @@ export default function RequestsListPage({ role }: { role: Role }) {
     revalidateOnFocus: false,
   });
 
+  // Garante que requests seja um array mesmo quando undefined/null
+  const safeRequests = Array.isArray(requests) ? requests : [];
+  
   const adaptedRequestResponses =
     requestResponses?.map((response) => ({
       id: response.id,
@@ -48,7 +51,7 @@ export default function RequestsListPage({ role }: { role: Role }) {
     })) || [];
 
   const allRequests: any[] = [
-    ...(requests || []),
+    ...safeRequests,
     ...adaptedRequestResponses,
   ].sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),

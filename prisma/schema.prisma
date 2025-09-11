@@ -44,6 +44,7 @@ enum RequestStatus {
   AGUARDANDO_CHEFE_DIV_MEDICINA_4
   AGUARDANDO_CHEFE_SECAO_REGIONAL_3
   AGUARDANDO_RESPOSTA
+  AGUARDANDO_OPERADOR_FUSEX_CUSTOS
   REPROVADO
   NECESSITA_CORRECAO
   REPROVADO_DSAU
@@ -92,7 +93,25 @@ model User {
   regionId               String?
   actions                ActionLog[]
   formulariosRegistrados FormularioMedico[] @relation("UserFormularioMedico")
+  formulariosChefeDivMed4 FormularioMedicoChefeDiv4[] @relation("UserFormularioChefeDivMed4")
   custos                 Custo[]
+}
+
+model FormularioMedicoChefeDiv4 {
+  id             String    @id @default(uuid())
+  requestId      String
+  parecerTecnico String
+  observacoes    String?
+  aprovado       Boolean   @default(false)
+  userId         String
+  createdAt      DateTime  @default(now()) @db.Timestamp(6)
+
+  // Relações
+  request        Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  user           User      @relation("UserFormularioChefeDivMed4", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([userId])
 }
 
 model Organization {
@@ -139,6 +158,8 @@ model Request {
   updatedAt                DateTime          @updatedAt
   actions                  ActionLog[]
   formulariosRegistrados   FormularioMedico[]
+  formulariosChefeDivMed4 FormularioMedicoChefeDiv4[]
+  custos                  Custo[]
 }
 
 model RequestResponse {
@@ -233,8 +254,12 @@ model Custo {
   id          String   @id @default(uuid())
   descricao   String
   valor       Float
+  request     Request? @relation(fields: [requestId], references: [id])
+  requestId   String?
   usuario     User     @relation(fields: [usuarioId], references: [id])
   usuarioId   String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([requestId])
 }

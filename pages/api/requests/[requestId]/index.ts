@@ -67,6 +67,15 @@ export default async function handle(
             name: true,
           },
         },
+        custos: {
+          include: {
+            usuario: {
+              select: {
+                name: true
+              }
+            }
+          }
+        },
         formulariosRegistrados: {
           select: {
             id: true,
