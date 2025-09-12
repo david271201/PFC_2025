@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { formatCurrency } from '@/components/common/input';
+import { formatCurrency } from '@/utils/currency';
 import SpinLoading from '@/components/common/loading/SpinLoading';
 
 interface CustoStats {
@@ -162,31 +162,31 @@ export default function CustoStatsTable({ filters, isPrinting }: CustoStatsTable
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center mb-4">
               <div>
                 <p className="text-lg font-bold text-blue-600">
-                  {formatCurrency(data.resumoGeral.totalOPME)}
+                  {formatCurrency(data.resumoGeral.totalOPME, true)}
                 </p>
                 <p className="text-xs text-gray-600">OPME</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-purple-600">
-                  {formatCurrency(data.resumoGeral.totalPSA)}
+                  {formatCurrency(data.resumoGeral.totalPSA, true)}
                 </p>
                 <p className="text-xs text-gray-600">PSA</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-orange-600">
-                  {formatCurrency(data.resumoGeral.totalProcedure)}
+                  {formatCurrency(data.resumoGeral.totalProcedure, true)}
                 </p>
                 <p className="text-xs text-gray-600">Procedimentos</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-indigo-600">
-                  {formatCurrency(data.resumoGeral.totalTicket)}
+                  {formatCurrency(data.resumoGeral.totalTicket, true)}
                 </p>
                 <p className="text-xs text-gray-600">Passagens</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-verde">
-                  {formatCurrency(data.resumoGeral.totalGeral)}
+                  {formatCurrency(data.resumoGeral.totalGeral, true)}
                 </p>
                 <p className="text-xs text-gray-600">Total Geral</p>
               </div>
@@ -200,7 +200,7 @@ export default function CustoStatsTable({ filters, isPrinting }: CustoStatsTable
               </div>
               <div>
                 <p className="text-2xl font-bold text-verde">
-                  {formatCurrency(data.resumoGeral.custoMedio)}
+                  {formatCurrency(data.resumoGeral.custoMedio, true)}
                 </p>
                 <p className="text-sm text-gray-600">Custo Médio por Solicitação</p>
               </div>
@@ -248,25 +248,25 @@ export default function CustoStatsTable({ filters, isPrinting }: CustoStatsTable
                           {rm.name}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-blue-600 text-right">
-                          {formatCurrency(rm.totalOPME)}
+                          {formatCurrency(rm.totalOPME, true)}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-purple-600 text-right">
-                          {formatCurrency(rm.totalPSA)}
+                          {formatCurrency(rm.totalPSA, true)}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-orange-600 text-right">
-                          {formatCurrency(rm.totalProcedure)}
+                          {formatCurrency(rm.totalProcedure, true)}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-indigo-600 text-right">
-                          {formatCurrency(rm.totalTicket)}
+                          {formatCurrency(rm.totalTicket, true)}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-semibold">
-                          {formatCurrency(rm.totalGeral)}
+                          {formatCurrency(rm.totalGeral, true)}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                           {rm.quantidadeSolicitacoes}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm font-bold text-verde text-right">
-                          {formatCurrency(rm.custoMedio)}
+                          {formatCurrency(rm.custoMedio, true)}
                         </td>
                       </tr>
                     ))
@@ -329,25 +329,25 @@ export default function CustoStatsTable({ filters, isPrinting }: CustoStatsTable
                           {om.regionName}
                         </td>
                         <td className="px-2 py-4 whitespace-nowrap text-xs text-blue-600 text-right">
-                          {formatCurrency(om.totalOPME)}
+                          {formatCurrency(om.totalOPME, true)}
                         </td>
                         <td className="px-2 py-4 whitespace-nowrap text-xs text-purple-600 text-right">
-                          {formatCurrency(om.totalPSA)}
+                          {formatCurrency(om.totalPSA, true)}
                         </td>
                         <td className="px-2 py-4 whitespace-nowrap text-xs text-orange-600 text-right">
-                          {formatCurrency(om.totalProcedure)}
+                          {formatCurrency(om.totalProcedure, true)}
                         </td>
                         <td className="px-2 py-4 whitespace-nowrap text-xs text-indigo-600 text-right">
-                          {formatCurrency(om.totalTicket)}
+                          {formatCurrency(om.totalTicket, true)}
                         </td>
                         <td className="px-2 py-4 whitespace-nowrap text-xs text-gray-900 text-right font-semibold">
-                          {formatCurrency(om.totalGeral)}
+                          {formatCurrency(om.totalGeral, true)}
                         </td>
                         <td className="px-2 py-4 whitespace-nowrap text-xs text-gray-500 text-center">
                           {om.quantidadeSolicitacoes}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm font-bold text-verde text-right">
-                          {formatCurrency(om.custoMedio)}
+                          {formatCurrency(om.custoMedio, true)}
                         </td>
                       </tr>
                     ))

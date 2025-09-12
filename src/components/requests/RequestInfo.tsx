@@ -18,7 +18,9 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import Button from "../common/button";
-import Input, { formatCurrency } from "../common/input";
+import Input from "../common/input";
+import CurrencyInput from "../common/input/CurrencyInput";
+import { formatCurrency } from "@/utils/currency";
 import SpinLoading from "../common/loading/SpinLoading";
 import Select from "../common/select";
 import modal from "../common/modal";
@@ -198,8 +200,19 @@ const normalizeString = (text: string) =>
   };
 
   const handleCurrencyChange = (value: string, fieldOnChange: any) => {
-    const intValue = parseInt(value.replace(/\D/g, ""), 10);
-    fieldOnChange(intValue);
+    // Remove o símbolo da moeda e outros caracteres não numéricos, exceto o separador decimal
+    const numericValue = value.replace(/[^0-9,\.]/g, "");
+    
+    // Converte a string para um número
+    let numValue = 0;
+    if (numericValue) {
+      // Substitui vírgula por ponto para garantir o formato numérico correto
+      const normalizedValue = numericValue.replace(",", ".");
+      numValue = parseFloat(normalizedValue);
+    }
+    
+    // Passa o valor numérico para o campo
+    fieldOnChange(isNaN(numValue) ? 0 : numValue);
   };
 
   const onSubmit = async (data: RequestFormDataType) => {
@@ -361,15 +374,13 @@ const normalizeString = (text: string) =>
         rules={{ required: true }}
         defaultValue={0}
         render={({ field }) => (
-          <Input
+          <CurrencyInput
             label="Custo OPME estimado"
-            type="text"
-            divClassname="col-span-2 row-start-4"
-            value={formatCurrency(field.value)}
-            onChange={(e) =>
-              handleCurrencyChange(e.target.value, field.onChange)
-            }
+            className="col-span-2 row-start-4"
+            value={field.value || 0}
+            onChange={field.onChange}
             disabled={isInputDisabled}
+            inCents={true} // Indica que o valor é armazenado em centavos
           />
         )}
       />
@@ -379,25 +390,22 @@ const normalizeString = (text: string) =>
         rules={{ required: true }}
         defaultValue={0}
         render={({ field }) => (
-          <Input
+          <CurrencyInput
             label="Custo OCS/PSA"
-            type="text"
-            divClassname="col-span-2 row-start-4"
-            value={formatCurrency(field.value)}
-            onChange={(e) =>
-              handleCurrencyChange(e.target.value, field.onChange)
-            }
+            className="col-span-2 row-start-4"
+            value={field.value || 0}
+            onChange={field.onChange}
             disabled={isInputDisabled}
+            inCents={true} // Indica que o valor é armazenado em centavos
           />
         )}
-        
       />
       {/* Card for Total Cost */}
       <div className="col-span-2 row-start-5">
         <div className="p-4 border rounded-md shadow-sm bg-white">
           <span className="font-semibold text-grafite">Custo Total</span>
           <p className="text-lg font-bold text-verde">
-            {formatCurrency(totalCost)}
+            {formatCurrency(totalCost, true)}
           </p>
         </div>
       </div>
