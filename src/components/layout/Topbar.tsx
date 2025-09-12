@@ -40,14 +40,16 @@ export default function Topbar() {
               Estatísticas
             </button>          )}
           
-          {/* Botão Custos */}
-          <button
-            type="button"
-            onClick={() => router.push('/custos')}
-            className={`rounded print:hidden ${pathname.includes('/custos') ? 'bg-verdeEscuro' : ''} px-2 py-1 text-white hover:bg-verdeEscuro`}
-          >
-            Custos
-          </button>
+          {/* Botão Custos - visível apenas para administradores e não para operador FUSEX */}
+          {user?.role && user.role !== Role.OPERADOR_FUSEX && (
+            <button
+              type="button"
+              onClick={() => router.push('/custos')}
+              className={`rounded print:hidden ${pathname.includes('/custos') ? 'bg-verdeEscuro' : ''} px-2 py-1 text-white hover:bg-verdeEscuro`}
+            >
+              Custos
+            </button>
+          )}
         </div>
       </div>
       <div className="relative">

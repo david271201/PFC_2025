@@ -111,7 +111,9 @@ export default function RequestPage({ role }: { role: Role }) {
               <ResponsesTable responses={request.requestResponses} />
             </div>
           )}
-        {(isStatusForRole(request?.status, role) || role === Role.OPERADOR_FUSEX) && (
+        {(isStatusForRole(request?.status, role) || 
+           (role === Role.OPERADOR_FUSEX && request?.status === RequestStatus.AGUARDANDO_OPERADOR_FUSEX_CUSTOS)) && 
+           request?.status !== RequestStatus.APROVADO && (
           <RequestForm
             status={request?.status}
             responses={responses}
@@ -121,7 +123,6 @@ export default function RequestPage({ role }: { role: Role }) {
         
         {/* Componente de custos - aparece apenas para Operador FUSEX na etapa de custos ou para visualização após preenchidos */}
         {(request?.status === RequestStatus.AGUARDANDO_OPERADOR_FUSEX_CUSTOS || 
-           (request?.status === RequestStatus.APROVADO && role === Role.OPERADOR_FUSEX) ||
            (requestId && request?.custos && request.custos.length > 0)) && (
           <Accordion.Root startOpen>
             <Accordion.Header>
