@@ -32,13 +32,23 @@ export default function Topbar() {
           </button>
           {/* Botão Estatísticas - apenas para papéis específicos */}
           {user?.role === Role.SUBDIRETOR_SAUDE && (
-            <button
-              type="button"
-              onClick={() => router.push('/estatisticas')}
-              className={`rounded print:hidden ${pathname.includes('/estatisticas') ? 'bg-verdeEscuro' : ''} px-2 py-1 text-white hover:bg-verdeEscuro`}
-            >
-              Estatísticas
-            </button>          )}
+            <>
+              <button
+                type="button"
+                onClick={() => router.push('/estatisticas')}
+                className={`rounded print:hidden ${pathname.includes('/estatisticas') ? 'bg-verdeEscuro' : ''} px-2 py-1 text-white hover:bg-verdeEscuro`}
+              >
+                Estatísticas
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/admin/organizations')}
+                className={`rounded print:hidden ${pathname.includes('/admin/organizations') ? 'bg-verdeEscuro' : ''} px-2 py-1 text-white hover:bg-verdeEscuro`}
+              >
+                Organizações
+              </button>
+            </>
+          )}
           
           {/* Botão Custos - visível apenas para administradores e não para operador FUSEX */}
           {user?.role && user.role !== Role.OPERADOR_FUSEX && (
