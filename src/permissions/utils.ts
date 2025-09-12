@@ -187,12 +187,17 @@ export const statusTransitions: Record<
     requiredRole: Role.DRAS,
   },
   [RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_2]: {
-    nextStatus: RequestStatus.APROVADO,
+    nextStatus: RequestStatus.AGUARDANDO_OPERADOR_FUSEX_CUSTOS,
     previousStatus: RequestStatus.AGUARDANDO_DRAS,
     requiredRole: Role.SUBDIRETOR_SAUDE,
   },
+  [RequestStatus.AGUARDANDO_OPERADOR_FUSEX_CUSTOS]: {
+    nextStatus: RequestStatus.APROVADO,
+    previousStatus: RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_2,
+    requiredRole: Role.OPERADOR_FUSEX,
+  },
   // Status obsoleto - mantido apenas para compatibilidade
-  [RequestStatus.AGUARDANDO_CHEM_3]: null,
+  // [RequestStatus.AGUARDANDO_CHEM_3]: null,
   [RequestStatus.APROVADO]: null,
   [RequestStatus.REPROVADO]: null,
   [RequestStatus.REPROVADO_DSAU]: {

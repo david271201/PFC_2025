@@ -5,14 +5,10 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   divClassname?: string;
 }
 
-export function formatCurrency(value: number) {
-  const intValue = value || 0;
-  return (intValue / 1000).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+import { formatCurrency as formatCurrencyUtil } from '@/utils/currency';
+
+export function formatCurrency(value: number, inCents = false) {
+  return formatCurrencyUtil(value, inCents);
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(

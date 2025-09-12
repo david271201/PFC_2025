@@ -17,6 +17,7 @@ import RequestForm from '@/components/requests/RequestForm';
 import ActionsTable from '@/components/actions/ActionsTable';
 import FormularioActionButton from '@/components/requests/FormularioActionButton';
 import FormularioViewLink from '@/components/requests/FormularioViewLink';
+import RequestCustos from '@/components/custos/RequestCustos';
 
 export default function RequestPage({ role }: { role: Role }) {
   const router = useRouter();
@@ -110,12 +111,33 @@ export default function RequestPage({ role }: { role: Role }) {
               <ResponsesTable responses={request.requestResponses} />
             </div>
           )}
-        {(isStatusForRole(request?.status, role) || role === Role.OPERADOR_FUSEX) && (
+        {(isStatusForRole(request?.status, role) || 
+           (role === Role.OPERADOR_FUSEX && request?.status === RequestStatus.AGUARDANDO_OPERADOR_FUSEX_CUSTOS)) && 
+           request?.status !== RequestStatus.APROVADO && (
           <RequestForm
             status={request?.status}
             responses={responses}
             userRole={role}
           />
+        )}
+        
+        {/* Componente de custos - aparece apenas para Operador FUSEX na etapa de custos ou para visualização após preenchidos */}
+        {(request?.status === RequestStatus.AGUARDANDO_OPERADOR_FUSEX_CUSTOS || 
+           (requestId && request?.custos && request.custos.length > 0)) && (
+          <Accordion.Root startOpen>
+            <Accordion.Header>
+              <h2 className="text-xl font-bold text-grafite">
+                Custos da Solicitação
+              </h2>
+            </Accordion.Header>
+            <Accordion.Body>
+              <RequestCustos 
+                requestId={requestId as string} 
+                userRole={role} 
+                isEditable={request?.status === RequestStatus.AGUARDANDO_OPERADOR_FUSEX_CUSTOS} 
+              />
+            </Accordion.Body>
+          </Accordion.Root>
         )}
       </div>
     </div>

@@ -1,0 +1,16 @@
+model FormularioMedicoChefeDiv4 {
+  id             String   @id @default(uuid())
+  requestId      String
+  parecerTecnico String
+  observacoes    String?
+  aprovado       Boolean  @default(false)
+  userId         String
+  createdAt      DateTime @default(now())
+
+  // Relações
+  request        Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([userId])
+}

@@ -33,6 +33,19 @@ export type TRequestResponseWithReceiver = RequestResponse & {
   actions: TActionLogWithUserInfo[];
 };
 
+export type TCusto = {
+  id: string;
+  descricao: string;
+  valor: number;
+  requestId: string;
+  usuarioId: string;
+  createdAt: string;
+  updatedAt: string;
+  usuario?: {
+    name: string;
+  };
+};
+
 export type TRequestInfoWithResponses = TRequestInfo & {
   requestResponses?: TRequestResponseWithReceiver[];
   formulariosRegistrados?: Array<{
@@ -40,6 +53,7 @@ export type TRequestInfoWithResponses = TRequestInfo & {
     consultaExame: string;
     createdAt: string;
   }>;
+  custos?: TCusto[];
 };
 
 export type TRequestResponseWithRequestInfo = RequestResponse & {
