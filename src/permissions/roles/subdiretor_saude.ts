@@ -7,6 +7,10 @@ const permissionsArray: Permission[] = [
   'requests:read',
   'requests:update',
   'stats:read',
+  'pacients:create',
+  'pacients:read',
+  'pacients:update',
+  'pacients:delete',
 ];
 
 const permissions = new Set(permissionsArray);

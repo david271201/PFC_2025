@@ -29,8 +29,7 @@ export default function Topbar() {
             className={`rounded print:hidden ${pathname === '/solicitacoes' ? 'bg-verdeEscuro' : ''} px-2 py-1 text-white hover:bg-verdeEscuro`}
           >
             Solicitações
-          </button>
-          {/* Botão Estatísticas - apenas para papéis específicos */}
+          </button>          {/* Botão Estatísticas - apenas para papéis específicos */}
           {user?.role === Role.SUBDIRETOR_SAUDE && (
             <>
               <button
@@ -39,6 +38,12 @@ export default function Topbar() {
                 className={`rounded print:hidden ${pathname.includes('/estatisticas') ? 'bg-verdeEscuro' : ''} px-2 py-1 text-white hover:bg-verdeEscuro`}
               >
                 Estatísticas
+              </button>              <button
+                type="button"
+                onClick={() => router.push('/admin/pacients')}
+                className={`rounded print:hidden ${pathname.includes('/admin/pacients') ? 'bg-verdeEscuro' : ''} px-2 py-1 text-white hover:bg-verdeEscuro`}
+              >
+                Pacientes
               </button>
               <button
                 type="button"

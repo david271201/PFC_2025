@@ -2,9 +2,11 @@ export const permissions = [
   /* PERMISSOES PARA ARQUIVOS */
   'files:download', // Download de arquivo
   /* PERMISSOES PARA ORGANIZAÇÕES */
-  'organizations:read', // Leitura de organização
-  /* PERMISSOES PARA PACIENTES */
+  'organizations:read', // Leitura de organização  /* PERMISSOES PARA PACIENTES */
+  'pacients:create', // Criação de paciente
   'pacients:read', // Leitura de paciente
+  'pacients:update', // Atualização de paciente
+  'pacients:delete', // Deleção de paciente
   /* PERMISSOES PARA SOLICITACOES */
   'requests:create', // Criação de solicitação
   'requests:read', // Leitura de solicitação

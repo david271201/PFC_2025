@@ -50,9 +50,13 @@ export default function StatsPage() {
       value: string;
       label: string;
     }[];
+    startDate: string;
+    endDate: string;
   }>({
     region: [],
     organization: [],
+    startDate: '',
+    endDate: '',
   });
 
   const [isPrinting, setisPrinting] = useState(false);
@@ -76,7 +80,6 @@ export default function StatsPage() {
     value: org.id,
     label: org.name,
   }));
-
   const { data: statsData, isLoading: isLoadingStats } = useSWR<{
     requestsByOrganization: {
       id: string;
@@ -105,6 +108,8 @@ export default function StatsPage() {
       organizations: btoa(
         filters.organization.map((filter) => filter.value).join(','),
       ),
+      startDate: filters.startDate,
+      endDate: filters.endDate,
     })}`,
     fetcher,
     {
@@ -275,32 +280,77 @@ export default function StatsPage() {
       >
         Exportar relatório
       </Button>      <h1 className="text-2xl font-bold text-grafite">Estatísticas</h1>
-      
-      {/* Filtros */}
-      <div className="flex items-center gap-4 print:hidden">
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-grafite">Região:</span>
-          <ReactSelect
-            isMulti
-            value={filters.region}
-            options={regionOptions}
-            onChange={(newValue) => handleFilterChange(newValue, 'region')}
-            placeholder="Todas"
-            className="min-w-44"
-          />
+        {/* Filtros */}
+      <div className="bg-white shadow rounded-lg p-6 mb-6 print:hidden">
+        <h3 className="text-lg font-bold text-grafite mb-4">Filtros</h3>
+        
+        {/* Filtros de Data */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Data Inicial
+            </label>
+            <input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-verde"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Data Final
+            </label>
+            <input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-verde"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Região
+            </label>
+            <ReactSelect
+              isMulti
+              value={filters.region}
+              options={regionOptions}
+              onChange={(newValue) => handleFilterChange(newValue, 'region')}
+              placeholder="Todas"
+              className="min-w-44"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              OM
+            </label>
+            <ReactSelect
+              isMulti
+              value={filters.organization}
+              options={organizationOptions}
+              onChange={(newValue) =>
+                handleFilterChange(newValue, 'organization')
+              }
+              placeholder="Todas"
+              className="min-w-44"
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-grafite">OM:</span>
-          <ReactSelect
-            isMulti
-            value={filters.organization}
-            options={organizationOptions}
-            onChange={(newValue) =>
-              handleFilterChange(newValue, 'organization')
-            }
-            placeholder="Todas"
-            className="min-w-44"
-          />
+
+        {/* Botão de limpar filtros */}
+        <div className="flex justify-end">
+          <button
+            onClick={() => setFilters({
+              region: [],
+              organization: [],
+              startDate: '',
+              endDate: ''
+            })}
+            className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+          >
+            Limpar Filtros
+          </button>
         </div>
       </div>
 
@@ -380,9 +430,7 @@ export default function StatsPage() {
             isPrinting={isPrinting}
           />
         </div>
-      )}
-
-      {/* Tabela de Custos Médios */}
+      )}      {/* Tabela de Custos Médios */}
       <div className="mt-8">
         <CustoStatsTable 
           filters={filters}
