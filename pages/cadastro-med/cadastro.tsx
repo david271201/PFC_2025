@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,7 +19,7 @@ const formularioMedicoSchema = z.object({
   precCpMatriculaCpf: z.string().min(1, "Prec-CP/matrícula/CPF é obrigatório"),
   idade: z.string().min(1, "Idade é obrigatória"),
   postoGraduacaoTitular: z.string().min(1, "Posto/graduação do titular é obrigatório"),
-  necessitaAcompanhante: z.string().transform((val) => val === "sim"),
+  necessitaAcompanhante: z.enum(["sim", "nao"]),
   consultaExame: z.string().min(1, "Consulta/exame/procedimento solicitado é obrigatório"),
   
   // Campos da Divisão de Medicina
@@ -46,17 +46,19 @@ type FormularioMedicoData = z.infer<typeof formularioMedicoSchema>;
 export default function FormularioMedicoParte1() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { requestId } = router.query; // Captura o ID da solicitação da URL
+  const [isLoading, setIsLoading] = useState(false);
+  const { requestId, formularioId } = router.query; // Captura o ID da solicitação e do formulário da URL
 
   const {
     register,
     handleSubmit,
     setValue,
+    reset,
     formState: { errors }
   } = useForm<FormularioMedicoData>({
     resolver: zodResolver(formularioMedicoSchema),
     defaultValues: {
-      necessitaAcompanhante: false,
+      necessitaAcompanhante: "nao",
       profissionalCiente: undefined,
       materialDisponivel: undefined,
       pacienteNoMapa: undefined,
@@ -64,6 +66,84 @@ export default function FormularioMedicoParte1() {
       leitoReservado: undefined,
     }
   });
+
+  // Buscar dados do formulário quando houver um formularioId
+  useEffect(() => {
+    const fetchFormulario = async () => {
+      if (!formularioId) return;
+      
+      try {
+        setIsLoading(true);
+        const response = await fetch(`/api/formularios-medicos/formulario/${formularioId}`);
+        
+        if (!response.ok) {
+          throw new Error('Erro ao buscar dados do formulário');
+        }
+        
+        const data = await response.json();
+        
+        // Preencher o formulário com os dados obtidos
+        // Usamos setValue para cada campo para evitar problemas de tipagem
+        setValue('nomeBeneficiario', data.nomeBeneficiario || '');
+        setValue('precCpMatriculaCpf', data.precCpMatriculaCpf || '');
+        setValue('idade', data.idade || '');
+        setValue('postoGraduacaoTitular', data.postoGraduacaoTitular || '');
+        setValue('consultaExame', data.consultaExame || '');
+        setValue('justificativaProfissionalCiente', data.justificativaProfissionalCiente || '');
+        setValue('justificativaMaterialDisponivel', data.justificativaMaterialDisponivel || '');
+        setValue('justificativaPacienteNoMapa', data.justificativaPacienteNoMapa || '');
+        setValue('justificativaSetorEmCondicoes', data.justificativaSetorEmCondicoes || '');
+        setValue('justificativaLeitoReservado', data.justificativaLeitoReservado || '');
+        
+        // Para campos booleanos e radios, precisamos de tratamento especial
+        setValue('necessitaAcompanhante', data.necessitaAcompanhante === true ? 'sim' : 'nao');
+        
+        if (data.profissionalCiente !== undefined) {
+          setValue('profissionalCiente', data.profissionalCiente === true ? 'sim' : 'nao');
+        }
+        
+        if (data.materialDisponivel !== undefined) {
+          setValue('materialDisponivel', data.materialDisponivel === true ? 'sim' : 'nao');
+        }
+        
+        if (data.pacienteNoMapa !== undefined) {
+          setValue('pacienteNoMapa', data.pacienteNoMapa === true ? 'sim' : 'nao');
+        }
+        
+        if (data.setorEmCondicoes !== undefined) {
+          setValue('setorEmCondicoes', data.setorEmCondicoes === true ? 'sim' : 'nao');
+        }
+        
+        if (data.leitoReservado !== undefined) {
+          setValue('leitoReservado', data.leitoReservado === true ? 'sim' : 'nao');
+        }
+        
+        // Se o formulário estiver sendo carregado, usar o requestId dele
+        if (data.requestId && !requestId) {
+          router.replace({
+            pathname: router.pathname,
+            query: { ...router.query, requestId: data.requestId }
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao buscar formulário:', error);
+        Swal.fire({
+          title: 'Erro',
+          text: 'Não foi possível carregar os dados do formulário',
+          icon: 'error',
+          customClass: {
+            confirmButton: 'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+          },
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    if (formularioId && typeof formularioId === 'string') {
+      fetchFormulario();
+    }
+  }, [formularioId, reset, router]);
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { value, name } = e.target;
@@ -82,17 +162,31 @@ export default function FormularioMedicoParte1() {
         throw new Error('ID da solicitação não fornecido');
       }
       
+      // Transformar os campos de string para boolean antes de enviar para a API
+      const dataToSubmit = {
+        ...data,
+        // Transformar campos de radio "sim"/"nao" para valores booleanos
+        necessitaAcompanhante: data.necessitaAcompanhante === 'sim',
+        profissionalCiente: data.profissionalCiente === 'sim',
+        materialDisponivel: data.materialDisponivel === 'sim',
+        pacienteNoMapa: data.pacienteNoMapa === 'sim',
+        setorEmCondicoes: data.setorEmCondicoes === 'sim',
+        leitoReservado: data.leitoReservado === 'sim'
+      };
+      
+      // Verificar se estamos editando um formulário existente ou criando um novo
+      const isEditing = formularioId !== undefined;
+      
       // Enviar para a API de cadastro com o ID da solicitação
       // Isso salva os dados na tabela FormularioMedico com referência à solicitação (requestId)
-      // Mesmo quando a organização A (remetente) envia uma solicitação para a organização B (receptora),
-      // os dados do formulário ficam associados à solicitação original
       const formularioResponse = await fetch('/api/formularios-medicos/cadastrar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...data,
+          ...dataToSubmit,
+          id: isEditing ? formularioId : undefined, // Enviar ID se estiver editando
           requestId: requestId as string, // Vincula o formulário à solicitação original
           parte: 'OMS_DESTINO' // Indica que este formulário é da OMS de destino (organização B)
         }),
@@ -105,9 +199,8 @@ export default function FormularioMedicoParte1() {
       
       const formularioData = await formularioResponse.json();
       
-      // Atualizar o fluxo da solicitação através da API de avaliação
-      // Este endpoint irá atualizar o status da solicitação para o próximo na sequência
-      // A solicitação mantém a organização B como receptora (quando em AGUARDANDO_CHEFE_DIV_MEDICINA_4)
+      // Atualizar o fluxo da solicitação através da API de avaliação do Chefe de Divisão de Medicina
+      // Este endpoint irá atualizar o status da solicitação para AGUARDANDO_CHEFE_SECAO_REGIONAL_3
       const avaliacaoResponse = await fetch('/api/avaliacoes/chefe-div-medicina', {
         method: 'POST',
         headers: {
@@ -152,11 +245,21 @@ export default function FormularioMedicoParte1() {
   };
 
   return (
-    <Layout>
+
       <div className="flex flex-col gap-4 p-4">
-        <h1 className="text-2xl font-bold text-grafite">Formulário de Atendimento Médico - OMS Destino</h1>
-        <Card>
-          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-7 gap-4">
+        <h1 className="text-2xl font-bold text-grafite">Formulário de Atendimento Médico - Chefe Divisão Medicina 4</h1>
+        {isLoading ? (
+          <Card>
+            <div className="flex justify-center items-center p-10">
+              <div className="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-verde" role="status">
+                <span className="visually-hidden">Carregando...</span>
+              </div>
+              <span className="ml-2">Carregando dados do formulário...</span>
+            </div>
+          </Card>
+        ) : (
+          <Card>
+            <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-7 gap-4">
             <div className="col-span-7 border-b border-gray-200 pb-2 mb-2">
               <h2 className="text-lg font-semibold text-grafite">Dados do Beneficiário</h2>
             </div>
@@ -445,8 +548,8 @@ export default function FormularioMedicoParte1() {
             </div>
           </form>
         </Card>
+        )}
       </div>
-    </Layout>
   );
 }
 
@@ -464,8 +567,8 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   
   const { role } = session.user as UserType;
 
-  // Verificação de permissão - ajuste conforme suas regras de permissão
-  if (!checkPermission(role, 'requests:create')) {
+  // Verificação de permissão - permitindo acesso ao CHEFE_DIV_MEDICINA
+  if (role !== 'CHEFE_DIV_MEDICINA' && !checkPermission(role, 'requests:create')) {
     return {
       redirect: {
         destination: '/solicitacoes',

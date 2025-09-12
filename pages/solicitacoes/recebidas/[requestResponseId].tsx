@@ -22,6 +22,8 @@ import modal from '@/components/common/modal';
 import Swal from 'sweetalert2';
 import { TRequestResponseWithRequestInfo } from '@/common-types';
 import { isStatusForRole } from '@/utils';
+import FormularioActionButton from '@/components/requests/FormularioActionButton';
+import FormularioViewLink from '@/components/requests/FormularioViewLink';
 import {
   ArrowUpTrayIcon,
   DocumentIcon,
@@ -136,6 +138,15 @@ export default function RequestPage({ role }: { role: Role }) {
         Solicitação {requestResponse?.requestId}
       </h1>
       <div className="flex flex-col gap-4 px-2">
+        {/* Botão para preencher formulário médico (aparece apenas para Chefe da Divisão de Medicina) */}
+        {requestResponse?.requestId && (
+          <FormularioActionButton
+            requestId={requestResponse.requestId}
+            userRole={role}
+            requestStatus={requestResponse?.request?.status || ''}
+          />
+        )}
+        
         <Accordion.Root startOpen>
           <Accordion.Header>
             <h2 className="text-xl font-bold text-grafite">

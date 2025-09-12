@@ -6,6 +6,9 @@ import { UserType } from '@/permissions/utils';
 
 // Schema para validação do formulário médico completo
 const formularioMedicoSchema = z.object({
+  // ID opcional para atualização
+  id: z.string().uuid("ID do formulário inválido").optional(),
+  
   // Dados do beneficiário
   nomeBeneficiario: z.string().min(1, "Nome completo é obrigatório"),
   precCpMatriculaCpf: z.string().min(1, "Prec-CP/matrícula/CPF é obrigatório"),
@@ -86,72 +89,106 @@ export default async function handler(
         return res.status(404).json({ message: 'Solicitação não encontrada' });
       }
 
-      // Salvar no banco de dados usando Prisma
-      const formularioMedico = await prisma.formularioMedico.create({
-        data: {
-          // Dados do beneficiário
-          nomeBeneficiario: dadosFormulario.nomeBeneficiario,
-          precCpMatriculaCpf: dadosFormulario.precCpMatriculaCpf,
-          idade: dadosFormulario.idade,
-          postoGraduacaoTitular: dadosFormulario.postoGraduacaoTitular,
-          necessitaAcompanhante: dadosFormulario.necessitaAcompanhante,
-          consultaExame: dadosFormulario.consultaExame,
-          
-          // Divisão de Medicina
-          profissionalCiente: dadosFormulario.profissionalCiente || false,
-          justificativaProfissionalCiente: dadosFormulario.justificativaProfissionalCiente,
-          
-          // Depósito de Material Cirúrgico
-          materialDisponivel: dadosFormulario.materialDisponivel || false,
-          justificativaMaterialDisponivel: dadosFormulario.justificativaMaterialDisponivel,
-          
-          // Centro Cirúrgico
-          pacienteNoMapa: dadosFormulario.pacienteNoMapa || false,
-          justificativaPacienteNoMapa: dadosFormulario.justificativaPacienteNoMapa,
-          setorEmCondicoes: dadosFormulario.setorEmCondicoes || false,
-          justificativaSetorEmCondicoes: dadosFormulario.justificativaSetorEmCondicoes,
-          
-          // Unidade de Internação
-          leitoReservado: dadosFormulario.leitoReservado,
-          justificativaLeitoReservado: dadosFormulario.justificativaLeitoReservado,
-          
-          // Assistência Social
-          hotelReservado: dadosFormulario.hotelReservado,
-          justificativaHotelReservado: dadosFormulario.justificativaHotel,
-          
-          // Traslado
-          motorista1: dadosFormulario.motorista1,
-          horario1: dadosFormulario.horario1,
-          motorista2: dadosFormulario.motorista2,
-          horario2: dadosFormulario.horario2,
-          motorista3: dadosFormulario.motorista3,
-          horario3: dadosFormulario.horario3,
-          motorista4: dadosFormulario.motorista4,
-          horario4: dadosFormulario.horario4,
-          
-          // Aprovação
-          aprovacao: dadosFormulario.aprovacao,
-          
-          // Registro do usuário que criou
-          criadoPorId: userId as string,
-          
-          // ID da solicitação
-          requestId: dadosFormulario.requestId
+      // Dados comuns para create ou update
+      const dadosFormularioCommon = {
+        // Dados do beneficiário
+        nomeBeneficiario: dadosFormulario.nomeBeneficiario,
+        precCpMatriculaCpf: dadosFormulario.precCpMatriculaCpf,
+        idade: dadosFormulario.idade,
+        postoGraduacaoTitular: dadosFormulario.postoGraduacaoTitular,
+        necessitaAcompanhante: dadosFormulario.necessitaAcompanhante,
+        consultaExame: dadosFormulario.consultaExame,
+        
+        // Divisão de Medicina
+        profissionalCiente: dadosFormulario.profissionalCiente || false,
+        justificativaProfissionalCiente: dadosFormulario.justificativaProfissionalCiente,
+        
+        // Depósito de Material Cirúrgico
+        materialDisponivel: dadosFormulario.materialDisponivel || false,
+        justificativaMaterialDisponivel: dadosFormulario.justificativaMaterialDisponivel,
+        
+        // Centro Cirúrgico
+        pacienteNoMapa: dadosFormulario.pacienteNoMapa || false,
+        justificativaPacienteNoMapa: dadosFormulario.justificativaPacienteNoMapa,
+        setorEmCondicoes: dadosFormulario.setorEmCondicoes || false,
+        justificativaSetorEmCondicoes: dadosFormulario.justificativaSetorEmCondicoes,
+        
+        // Unidade de Internação
+        leitoReservado: dadosFormulario.leitoReservado,
+        justificativaLeitoReservado: dadosFormulario.justificativaLeitoReservado,
+        
+        // Assistência Social
+        hotelReservado: dadosFormulario.hotelReservado,
+        justificativaHotelReservado: dadosFormulario.justificativaHotel,
+        
+        // Traslado
+        motorista1: dadosFormulario.motorista1,
+        horario1: dadosFormulario.horario1,
+        motorista2: dadosFormulario.motorista2,
+        horario2: dadosFormulario.horario2,
+        motorista3: dadosFormulario.motorista3,
+        horario3: dadosFormulario.horario3,
+        motorista4: dadosFormulario.motorista4,
+        horario4: dadosFormulario.horario4,
+        
+        // Aprovação
+        aprovacao: dadosFormulario.aprovacao,
+        
+        // ID da solicitação
+        requestId: dadosFormulario.requestId
+      };
+
+      let formularioMedico;
+      let action;
+      let message;
+
+      // Verificar se é uma atualização ou criação
+      if (dadosFormulario.id) {
+        // Verificar se o formulário existe
+        const formularioExiste = await prisma.formularioMedico.findUnique({
+          where: { id: dadosFormulario.id }
+        });
+
+        if (!formularioExiste) {
+          return res.status(404).json({ message: 'Formulário médico não encontrado para atualização' });
         }
-      });
+
+        // Atualizar formulário existente
+        formularioMedico = await prisma.formularioMedico.update({
+          where: { id: dadosFormulario.id },
+          data: {
+            ...dadosFormularioCommon,
+            // Não temos esses campos no modelo, então usamos os campos padrão
+            updatedAt: new Date()
+          }
+        });
+        action = 'ATUALIZACAO';
+        message = 'Formulário médico atualizado com sucesso';
+      } else {
+        // Criar novo formulário
+        formularioMedico = await prisma.formularioMedico.create({
+          data: {
+            ...dadosFormularioCommon,
+            // Registro do usuário que criou
+            criadoPorId: userId as string,
+          }
+        });
+        action = 'CRIACAO';
+        message = 'Formulário médico criado com sucesso';
+      }
       
-      // Registrar a relação como uma observação na solicitação
+      // Registrar a ação no log
       await prisma.actionLog.create({
         data: {
           requestId: dadosFormulario.requestId,
           userId: userId as string,
-          action: 'CRIACAO',
-          observation: `Formulário médico (${dadosFormulario.parte}) ID: ${formularioMedico.id} registrado`
+          action: action === 'CRIACAO' ? 'CRIACAO' : 'APROVACAO', // Usando APROVACAO para atualizações
+          observation: `Formulário médico (${dadosFormulario.parte}) ID: ${formularioMedico.id} ${action === 'CRIACAO' ? 'registrado' : 'atualizado'}`
         }
       });
 
       return res.status(201).json({
-        message: 'Formulário médico criado com sucesso',
+        message,
         id: formularioMedico.id,
         requestId: dadosFormulario.requestId,
         parte: dadosFormulario.parte

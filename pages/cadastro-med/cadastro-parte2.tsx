@@ -153,7 +153,6 @@ export default function FormularioMedicoParte2() {
   };
 
   return (
-    <Layout>
       <div className="flex flex-col gap-4 p-4">
         <h1 className="text-2xl font-bold text-grafite">Formulário de Atendimento Médico - RM Destino (Seç Sau Reg)</h1>
         <Card>
@@ -379,7 +378,6 @@ export default function FormularioMedicoParte2() {
           </form>
         </Card>
       </div>
-    </Layout>
   );
 }
 

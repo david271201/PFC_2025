@@ -29,17 +29,52 @@ export default async function handler(
     try {
       const formData = req.body;
 
-      // Criar novo formulário
-      const formulario = await prisma.formularioMedicoChefeDiv4.create({
-        data: {
-          ...formData,
-          requestId: requestId,
-          createdAt: new Date(),
-          userId: session.user.id
-        }
+      // Verificar se o usuário está autenticado
+      if (!session.user || !session.user.id) {
+        return res.status(401).json({ message: 'Usuário não autenticado' });
+      }
+      
+      const userId = session.user.id;
+      
+      // Usar transação para criar formulário e atualizar status da solicitação
+      const result = await prisma.$transaction(async (tx) => {
+        // Criar novo formulário
+        const formulario = await tx.formularioMedicoChefeDiv4.create({
+          data: {
+            ...formData,
+            requestId: requestId,
+            createdAt: new Date(),
+            userId: userId
+          }
+        });
+        
+        // Atualizar status da solicitação
+        await tx.request.update({
+          where: { id: requestId },
+          data: { 
+            status: 'AGUARDANDO_CHEFE_SECAO_REGIONAL_3',
+            updatedAt: new Date()
+          }
+        });
+        
+        // Registrar a ação no log
+        await tx.actionLog.create({
+          data: {
+            requestId,
+            userId: userId,
+            action: formData.aprovado ? 'APROVACAO' : 'REPROVACAO',
+            observation: formData.aprovado 
+              ? `Parecer técnico favorável do Chefe da Divisão de Medicina: ${formData.parecerTecnico}` 
+              : `Parecer técnico desfavorável do Chefe da Divisão de Medicina: ${formData.parecerTecnico}`,
+            createdAt: new Date(),
+            files: []
+          }
+        });
+        
+        return formulario;
       });
 
-      return res.status(201).json(formulario);
+      return res.status(201).json(result);
     } catch (error) {
       console.error('Erro ao criar formulário:', error);
       return res.status(500).json({ message: 'Erro ao criar formulário' });

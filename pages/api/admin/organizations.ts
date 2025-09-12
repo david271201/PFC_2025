@@ -3,6 +3,7 @@ import { auth } from '../../../auth';
 import prisma from '../../../prisma/prismaClient';
 import { Role } from '@prisma/client';
 import { UserType } from '@/permissions/utils';
+import { generateDefaultUsers } from '@/utils/defaultUsers';
 
 export default async function handler(
   req: NextApiRequest,
@@ -89,15 +90,36 @@ export default async function handler(
         return res.status(409).json({ message: 'Já existe uma organização com este nome' });
       }
 
-      // Criar nova organização
-      const organization = await prisma.organization.create({
-        data: {
-          name: name.trim(),
-          regionId: regionId
+      // Criar nova organização e seus usuários padrão em uma transação
+      const result = await prisma.$transaction(async (tx) => {
+        // Primeiro, criar a organização
+        const organization = await tx.organization.create({
+          data: {
+            name: name.trim(),
+            regionId: regionId
+          }
+        });
+
+        // Gerar dados de usuários padrão
+        const { usersData, plainPasswords } = await generateDefaultUsers(
+          organization.id, 
+          organization.name
+        );
+
+        // Criar os usuários
+        for (const userData of usersData) {
+          await tx.user.create({
+            data: userData
+          });
         }
+
+        return {
+          organization,
+          plainPasswords // Senhas em texto claro para mostrar ao administrador
+        };
       });
 
-      return res.status(201).json(organization);
+      return res.status(201).json(result);
     } catch (error) {
       console.error('Erro ao criar organização:', error);
       return res.status(500).json({
