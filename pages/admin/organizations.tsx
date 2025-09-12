@@ -26,6 +26,7 @@ const OrganizationsPage = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [filteredOrganizations, setFilteredOrganizations] = useState<Organization[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +36,14 @@ const OrganizationsPage = () => {
   });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Estados para busca e filtros
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterRegion, setFilterRegion] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortField, setSortField] = useState('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Verificar autenticação e permissão
   useEffect(() => {
@@ -66,6 +75,7 @@ const OrganizationsPage = () => {
       
       const data = await response.json();
       setOrganizations(data);
+      setFilteredOrganizations(data);
     } catch (err) {
       setError('Erro ao carregar organizações. Por favor, tente novamente.');
       console.error(err);
@@ -73,6 +83,54 @@ const OrganizationsPage = () => {
       setLoading(false);
     }
   };
+  
+  // Função para filtrar e ordenar as organizações
+  useEffect(() => {
+    const filterOrganizations = () => {
+      let result = [...organizations];
+      
+      // Aplicar filtro de busca por nome
+      if (searchTerm) {
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        result = result.filter(org => 
+          org.name.toLowerCase().includes(lowerSearchTerm)
+        );
+      }
+      
+      // Aplicar filtro por região
+      if (filterRegion) {
+        result = result.filter(org => org.regionId === filterRegion);
+      }
+      
+      // Aplicar ordenação
+      result.sort((a, b) => {
+        if (sortField === 'name') {
+          return sortDirection === 'asc' 
+            ? a.name.localeCompare(b.name)
+            : b.name.localeCompare(a.name);
+        } else if (sortField === 'region') {
+          return sortDirection === 'asc'
+            ? a.region.name.localeCompare(b.region.name)
+            : b.region.name.localeCompare(a.region.name);
+        } else if (sortField === 'users') {
+          return sortDirection === 'asc'
+            ? a._count.users - b._count.users
+            : b._count.users - a._count.users;
+        } else if (sortField === 'requests') {
+          return sortDirection === 'asc'
+            ? a._count.sentRequests - b._count.sentRequests
+            : b._count.sentRequests - a._count.sentRequests;
+        }
+        
+        return 0;
+      });
+      
+      setFilteredOrganizations(result);
+      setCurrentPage(1); // Reset para primeira página quando filtrar
+    };
+    
+    filterOrganizations();
+  }, [organizations, searchTerm, filterRegion, sortField, sortDirection]);
 
   const fetchRegions = async () => {
     try {
@@ -187,6 +245,49 @@ const OrganizationsPage = () => {
     }
   };
 
+  // Funções auxiliares para paginação
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+  
+  const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setItemsPerPage(Number(e.target.value));
+    setCurrentPage(1); // Volta para a primeira página
+  };
+  
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+  
+  // Calcular organizações para a página atual
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentOrganizations = filteredOrganizations.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredOrganizations.length / itemsPerPage);
+  
+  const renderPageNumbers = () => {
+    const pageNumbers = [];
+    const maxPageButtons = 5;
+    
+    let startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
+    let endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+    
+    if (endPage - startPage + 1 < maxPageButtons) {
+      startPage = Math.max(1, endPage - maxPageButtons + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(i);
+    }
+    
+    return pageNumbers;
+  };
+
   if (status === 'loading' || loading) {
     return (
       <Layout>
@@ -218,6 +319,85 @@ const OrganizationsPage = () => {
             <span className="font-bold">Sucesso:</span> {successMessage}
           </div>
         )}
+
+        {/* Seção de Busca e Filtros */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">Buscar Organizações</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            {/* Campo de Busca por Nome */}
+            <div>
+              <label htmlFor="search" className="block text-sm font-medium mb-1">
+                Buscar por Nome
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Digite para buscar..."
+                />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Filtro por Região */}
+            <div>
+              <label htmlFor="filterRegion" className="block text-sm font-medium mb-1">
+                Filtrar por Região
+              </label>
+              <select
+                id="filterRegion"
+                value={filterRegion}
+                onChange={(e) => setFilterRegion(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Todas as Regiões</option>
+                {regions.map((region) => (
+                  <option key={region.id} value={region.id}>
+                    {region.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Seletor de Itens por Página */}
+            <div>
+              <label htmlFor="itemsPerPage" className="block text-sm font-medium mb-1">
+                Itens por página
+              </label>
+              <select
+                id="itemsPerPage"
+                value={itemsPerPage}
+                onChange={handleItemsPerPageChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Estatísticas e resultados da busca */}
+          <div className="text-sm text-gray-600">
+            Mostrando {filteredOrganizations.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} - {Math.min(currentPage * itemsPerPage, filteredOrganizations.length)} de {filteredOrganizations.length} organizações
+            {searchTerm && (
+              <span> filtradas por "<strong>{searchTerm}</strong>"</span>
+            )}
+            {filterRegion && (
+              <span> na região <strong>{regions.find(r => r.id === filterRegion)?.name}</strong></span>
+            )}
+          </div>
+        </div>
 
         {/* Formulário para adicionar nova organização */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -286,16 +466,56 @@ const OrganizationsPage = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nome
+                  <button 
+                    onClick={() => handleSort('name')}
+                    className="flex items-center focus:outline-none"
+                  >
+                    Nome
+                    {sortField === 'name' && (
+                      <span className="ml-1">
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </button>
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Região
+                  <button 
+                    onClick={() => handleSort('region')}
+                    className="flex items-center focus:outline-none"
+                  >
+                    Região
+                    {sortField === 'region' && (
+                      <span className="ml-1">
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </button>
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Usuários
+                  <button 
+                    onClick={() => handleSort('users')}
+                    className="flex items-center focus:outline-none"
+                  >
+                    Usuários
+                    {sortField === 'users' && (
+                      <span className="ml-1">
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </button>
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Solicitações
+                  <button 
+                    onClick={() => handleSort('requests')}
+                    className="flex items-center focus:outline-none"
+                  >
+                    Solicitações
+                    {sortField === 'requests' && (
+                      <span className="ml-1">
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </button>
                 </th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ações
@@ -303,14 +523,14 @@ const OrganizationsPage = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {organizations.length === 0 ? (
+              {filteredOrganizations.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
                     Nenhuma organização encontrada.
                   </td>
                 </tr>
               ) : (
-                organizations.map((org) => (
+                currentOrganizations.map((org) => (
                   <tr key={org.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {org.name}
@@ -347,9 +567,132 @@ const OrganizationsPage = () => {
               )}
             </tbody>
           </table>
+          
+          {/* Paginação */}
+          {filteredOrganizations.length > 0 && (
+            <div className="px-6 py-4 bg-white border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 flex justify-between sm:hidden">
+                  <button
+                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
+                      currentPage === 1 
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className={`ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
+                      currentPage === totalPages
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    Próximo
+                  </button>
+                </div>
+                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm text-gray-700">
+                      Mostrando <span className="font-medium">{filteredOrganizations.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> a{" "}
+                      <span className="font-medium">{Math.min(currentPage * itemsPerPage, filteredOrganizations.length)}</span> de{" "}
+                      <span className="font-medium">{filteredOrganizations.length}</span> resultados
+                    </p>
+                  </div>
+                  <div>
+                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                      <button
+                        onClick={() => handlePageChange(1)}
+                        disabled={currentPage === 1}
+                        className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                          currentPage === 1 
+                            ? 'text-gray-300 cursor-not-allowed' 
+                            : 'text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className="sr-only">Primeira</span>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        className={`relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium ${
+                          currentPage === 1 
+                            ? 'text-gray-300 cursor-not-allowed' 
+                            : 'text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className="sr-only">Anterior</span>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      
+                      {/* Números das páginas */}
+                      {renderPageNumbers().map(pageNum => (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`relative inline-flex items-center px-4 py-2 border ${
+                            currentPage === pageNum
+                              ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          } text-sm font-medium`}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
+                      
+                      <button
+                        onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                        disabled={currentPage === totalPages}
+                        className={`relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium ${
+                          currentPage === totalPages
+                            ? 'text-gray-300 cursor-not-allowed'
+                            : 'text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className="sr-only">Próximo</span>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handlePageChange(totalPages)}
+                        disabled={currentPage === totalPages}
+                        className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                          currentPage === totalPages
+                            ? 'text-gray-300 cursor-not-allowed'
+                            : 'text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className="sr-only">Última</span>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                        </svg>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </nav>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
   );
-};
+}
 
 export default OrganizationsPage;
