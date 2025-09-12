@@ -50,8 +50,8 @@ export default function Topbar() {
             </>
           )}
           
-          {/* Botão Custos - visível apenas para administradores e não para operador FUSEX */}
-          {user?.role && user.role !== Role.OPERADOR_FUSEX && (
+          {/* Botão Custos - visível apenas para administradores, exceto OPERADOR_FUSEX e SUBDIRETOR_SAUDE */}
+          {user?.role && user.role !== Role.OPERADOR_FUSEX && user.role !== Role.SUBDIRETOR_SAUDE && (
             <button
               type="button"
               onClick={() => router.push('/custos')}
