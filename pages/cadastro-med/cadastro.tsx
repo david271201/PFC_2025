@@ -285,6 +285,12 @@ export default function FormularioMedicoParte1() {
         
         const data = await response.json();
         
+        // Log detalhado do formulário carregado
+        console.log('Formulário carregado:', data);
+        if (data.criadoPor) {
+          console.log('Criado por:', data.criadoPor.name, '(', data.criadoPor.email, ')', 'Função:', data.criadoPor.role);
+        }
+        
         // Preencher o formulário com os dados obtidos
         // Usamos setValue para cada campo para evitar problemas de tipagem
         setValue('nomeBeneficiario', data.nomeBeneficiario || '');
@@ -319,6 +325,11 @@ export default function FormularioMedicoParte1() {
         
         if (data.leitoReservado !== undefined) {
           setValue('leitoReservado', data.leitoReservado === true ? 'sim' : 'nao');
+        }
+        
+        // Mostrar informações de quem criou o formulário
+        if (data.criadoPor) {
+          console.log(`Formulário criado por ${data.criadoPor.name} (${data.criadoPor.email}) em ${new Date(data.createdAt).toLocaleString()}`);
         }
         
         // Se o formulário estiver sendo carregado, usar o requestId dele
@@ -462,6 +473,14 @@ export default function FormularioMedicoParte1() {
           </Card>
         ) : (
           <Card>
+            {formularioId && (
+              <div className="mb-4 p-3 bg-gray-50 rounded-md border border-gray-200 text-sm">
+                <h3 className="font-semibold text-gray-700 mb-1">Informações do Formulário</h3>
+                <p><span className="font-medium">ID:</span> {formularioId}</p>
+                <p><span className="font-medium">Solicitação:</span> {requestId}</p>
+                <p><span className="font-medium">Data de criação:</span> {new Date().toLocaleDateString()}</p>
+              </div>
+            )}
             <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-7 gap-4">
             <div className="col-span-7 border-b border-gray-200 pb-2 mb-2">
               <h2 className="text-lg font-semibold text-grafite">Dados do Beneficiário</h2>

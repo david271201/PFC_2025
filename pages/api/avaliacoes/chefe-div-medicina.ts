@@ -14,11 +14,18 @@ export default async function handler(
     return res.status(401).json({ message: 'Usuário não autenticado' });
   }
 
-  // Verificar se o usuário é CHEFE_DIV_MEDICINA
-  const { role, id: userId } = session.user as UserType;
-  if (role !== Role.CHEFE_DIV_MEDICINA) {
+  // Verificar se o usuário é CHEFE_DIV_MEDICINA e extrair o userId corretamente
+  console.log('Sessão do usuário na API de avaliação:', JSON.stringify(session.user, null, 2));
+  
+  // Extrair corretamente o userId e role
+  const userRole = (session.user as any).role;
+  const userId = (session.user as any).userId;
+  
+  if (userRole !== Role.CHEFE_DIV_MEDICINA) {
     return res.status(403).json({ message: 'Usuário sem permissão para esta ação' });
   }
+  
+  console.log('ID do usuário na API de avaliação:', userId);
 
   if (req.method === 'POST') {
     try {
@@ -37,6 +44,12 @@ export default async function handler(
         return res.status(404).json({ message: 'Solicitação não encontrada' });
       }
 
+      // Garantir que o userId existe antes de continuar
+      if (!userId) {
+        console.error('ID do usuário não encontrado na sessão');
+        return res.status(401).json({ message: 'ID do usuário não encontrado na sessão' });
+      }
+      
       // Atualizar o status da solicitação para o próximo na sequência
       const updatedRequest = await prisma.$transaction(async (tx) => {
         // Atualizar status da solicitação
@@ -48,13 +61,29 @@ export default async function handler(
           }
         });
 
-        // Registrar a ação
+        // Registrar a ação com verificação prévia
+        console.log('Tentando criar ActionLog com:', {
+          requestId,
+          userId,
+          action: 'APROVACAO'
+        });
+        
+        // Verificar se o usuário existe
+        const userExists = await tx.user.findUnique({
+          where: { id: userId as string },
+          select: { id: true }
+        });
+        
+        if (!userExists) {
+          throw new Error(`Usuário com ID ${userId} não encontrado`);
+        }
+        
         await tx.actionLog.create({
           data: {
             requestId,
             userId: userId as string,
             action: 'APROVACAO',
-            observation: `Formulário médico avaliado pelo Chefe de Divisão de Medicina. ID do formulário: ${formularioId}`,
+            observation: `Formulário médico avaliado pelo Chefe de Divisão de Medicina. ID do formulário: ${formularioId || 'N/A'}`,
             files: []
           }
         });

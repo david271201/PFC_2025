@@ -122,7 +122,6 @@ export default function VisualizarFormulariosMedicos() {
   }
 
   return (
-    <Layout>
       <div className="flex flex-col gap-4 p-4">
         <h1 className="text-2xl font-bold text-grafite">Formulários Médicos da Solicitação</h1>
         
@@ -344,7 +343,6 @@ export default function VisualizarFormulariosMedicos() {
           </button>
         </div>
       </div>
-    </Layout>
   );
 }
 

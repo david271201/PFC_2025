@@ -205,29 +205,29 @@ model FormularioMedico {
   consultaExame                String
   
   // Divisão de Medicina
-  profissionalCiente           Boolean
+  profissionalCiente           Boolean  @default(false)
   justificativaProfissionalCiente String?
   
   // Depósito de Material Cirúrgico
-  materialDisponivel           Boolean
+  materialDisponivel           Boolean  @default(false)
   justificativaMaterialDisponivel String?
   
   // Centro Cirúrgico
-  pacienteNoMapa               Boolean
+  pacienteNoMapa               Boolean  @default(false)
   justificativaPacienteNoMapa  String?
-  setorEmCondicoes             Boolean
+  setorEmCondicoes             Boolean  @default(false)
   justificativaSetorEmCondicoes String?
   
   // Unidade de Internação
-  leitoReservado               Boolean?
+  leitoReservado               Boolean? @default(false)
   justificativaLeitoReservado  String?
   
-  // Relacionamento com a solicitação
-  request                      Request? @relation(fields: [requestId], references: [id])
-  requestId                    String?
+  // Relacionamento com a solicitação (obrigatório)
+  request                      Request  @relation(fields: [requestId], references: [id])
+  requestId                    String
   
   // Assistência Social
-  hotelReservado               Boolean?
+  hotelReservado               Boolean? @default(false)
   justificativaHotelReservado  String?
   
   // Traslado
@@ -244,10 +244,12 @@ model FormularioMedico {
   aprovacao                    Boolean? @default(false)
   
   // Metadados
-  criadoPor                    User     @relation("UserFormularioMedico", fields: [criadoPorId], references: [id])
   criadoPorId                  String
+  criadoPor                    User     @relation("UserFormularioMedico", fields: [criadoPorId], references: [id])
   createdAt                    DateTime @default(now())
   updatedAt                    DateTime @updatedAt
+  
+  @@index([requestId])
 }
 
 model Custo {

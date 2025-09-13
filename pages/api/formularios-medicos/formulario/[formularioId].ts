@@ -21,17 +21,49 @@ export default async function handler(
 
   if (req.method === 'GET') {
     try {
-      // Buscar formulário médico por ID
+      // Buscar formulário médico por ID com informações completas do criador
       const formulario = await prisma.formularioMedico.findUnique({
         where: { id: formularioId },
         include: {
           criadoPor: {
             select: {
+              id: true,
               name: true,
+              email: true,
               role: true,
               organization: {
                 select: {
-                  name: true
+                  id: true,
+                  name: true,
+                  region: {
+                    select: {
+                      name: true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          request: {
+            select: {
+              id: true,
+              description: true,
+              status: true,
+              cbhpmCode: true,
+              needsCompanion: true,
+              pacient: {
+                select: {
+                  name: true,
+                  cpf: true,
+                  precCp: true,
+                  rank: true,
+                  isDependent: true
+                }
+              },
+              sender: {
+                select: {
+                  name: true,
+                  id: true
                 }
               }
             }
