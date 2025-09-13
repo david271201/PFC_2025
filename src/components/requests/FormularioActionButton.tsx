@@ -10,10 +10,17 @@ interface FormularioActionButtonProps {
 
 const FormularioActionButton: React.FC<FormularioActionButtonProps> = ({ requestId, userRole, requestStatus }) => {
   const router = useRouter();
-  // Removida a necessidade de session e isOmsDestino
+  
+  // Logs detalhados para depuração
+  console.log('=== FormularioActionButton - Início ===');
+  console.log(`Atual URL: ${typeof window !== 'undefined' ? window.location.href : 'não disponível'}`);
+  console.log(`Params: userRole=${userRole}, requestStatus=${requestStatus}`);
+  console.log(`requestId recebido: ${requestId}`);
+  console.log(`Tipo do requestId: ${typeof requestId}`);
+  console.log('Query params da URL atual:', router.query);
   
   // Simplificado: não precisamos mais verificar se o usuário é da OMS de destino
-  console.log(`Verificando botão para ${userRole} na solicitação ${requestId} com status ${requestStatus}`);  // Verifica se deve mostrar o botão baseado apenas no papel do usuário e status da solicitação
+  console.log(`Verificando botão para ${userRole} na solicitação ${requestId} com status ${requestStatus}`); // Verifica se deve mostrar o botão baseado apenas no papel do usuário e status da solicitação
   // Não verificamos mais se o usuário é da organização receptora
   const shouldShowChefeDiv = userRole === 'CHEFE_DIV_MEDICINA' &&
     requestStatus === 'AGUARDANDO_CHEFE_DIV_MEDICINA_4';
@@ -39,10 +46,39 @@ const FormularioActionButton: React.FC<FormularioActionButtonProps> = ({ request
   }
 
   const handleClick = () => {
+    // Verificar se estamos na página de resposta a solicitação
+    const isRequestResponsePage = typeof window !== 'undefined' && 
+      window.location.pathname.includes('/solicitacoes/recebidas/');
+    
+    // Logs para depuração
+    console.log('=== handleClick ===');
+    console.log('isRequestResponsePage:', isRequestResponsePage);
+    console.log('pathname:', typeof window !== 'undefined' ? window.location.pathname : 'N/A');
+    
+    // Use window.location.href para um redirecionamento mais confiável
     if (shouldShowChefeDiv) {
-      router.push(`/cadastro-med/cadastro?requestId=${requestId}`);
+      // Log para debug com verificação extra
+      console.log("Redirecionando para formulário de Chefe Div Med com requestId:", requestId);
+      
+      // Verificando se o ID é válido antes de redirecionar
+      if (requestId && typeof requestId === 'string' && requestId.trim() !== '') {
+        // Importante: Vamos garantir que o ID é o da solicitação original (requestId) e não o da resposta
+        window.location.href = `/cadastro-med/cadastro?requestId=${requestId}`;
+        console.log(`Redirecionando para: /cadastro-med/cadastro?requestId=${requestId}`);
+      } else {
+        console.error("ID de solicitação inválido:", requestId);
+        alert("Erro: ID da solicitação não encontrado ou inválido.");
+      }
     } else if (shouldShowChefeSecReg) {
-      router.push(`/equipamentos/cadastro-parte2?requestId=${requestId}`);
+      console.log("Redirecionando para formulário de Chefe Sec Reg com requestId:", requestId);
+      
+      // Verificando se o ID é válido antes de redirecionar
+      if (requestId && typeof requestId === 'string' && requestId.trim() !== '') {
+        window.location.href = `/equipamentos/cadastro-parte2?requestId=${requestId}`;
+      } else {
+        console.error("ID de solicitação inválido:", requestId);
+        alert("Erro: ID da solicitação não encontrado ou inválido.");
+      }
     }
   };
 

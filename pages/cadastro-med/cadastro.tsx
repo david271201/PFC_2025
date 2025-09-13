@@ -67,6 +67,209 @@ export default function FormularioMedicoParte1() {
     }
   });
 
+  // Buscar dados da solicitação para preencher os dados do paciente
+  useEffect(() => {
+    console.log('=== Página de cadastro médico ===');
+    console.log('URL atual:', typeof window !== 'undefined' ? window.location.href : 'N/A');
+    console.log('URL search params:', typeof window !== 'undefined' ? window.location.search : 'N/A');
+    console.log('Router query params completos:', router.query);
+    console.log('Request ID recebido do router:', requestId);
+    console.log('Tipo do requestId:', typeof requestId);
+    
+    // Tentar obter o ID diretamente da URL também
+    const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const requestIdFromUrl = urlParams.get('requestId');
+    console.log('Request ID obtido diretamente da URL:', requestIdFromUrl);
+    
+    const fetchRequestData = async () => {
+      if (!requestId && !requestIdFromUrl) {
+        console.error('ID de solicitação ausente em todas as fontes');
+        
+        Swal.fire({
+          title: 'Erro',
+          text: 'ID da solicitação não encontrado. Verifique a URL e tente novamente.',
+          icon: 'error',
+          confirmButtonText: 'Voltar',
+          customClass: {
+            confirmButton: 'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+          },
+        }).then(() => {
+          // Redirecionar para a página de solicitações
+          router.push('/solicitacoes');
+        });
+        return;
+      }
+      
+      // Garantir que estamos usando o ID correto, com preferência para o da URL direta
+      const actualRequestId = requestIdFromUrl || (Array.isArray(requestId) ? requestId[0] : requestId);
+      console.log('ID de solicitação que será usado:', actualRequestId);
+      
+      try {
+        setIsLoading(true);
+        console.log(`Verificando existência da solicitação: /api/requests/verify?requestId=${actualRequestId}`);
+        
+        // Primeiro verificamos se a solicitação existe
+        console.log('Verificando existência da solicitação via debug endpoint...');
+        const debugResponse = await fetch(`/api/requests/debug/${actualRequestId}`);
+        const debugResult = await debugResponse.json();
+        console.log('Resultado do debug endpoint:', debugResult);
+        
+        // Agora verificamos pelo endpoint normal
+        console.log('Verificando existência da solicitação pelo endpoint normal...');
+        const verifyResponse = await fetch(`/api/requests/verify?requestId=${actualRequestId}`);
+        
+        if (!verifyResponse.ok) {
+          if (verifyResponse.status === 404) {
+            // Mostrar um diálogo perguntando se deseja criar uma solicitação de teste
+            const result = await Swal.fire({
+              title: 'Solicitação não encontrada',
+              text: 'A solicitação com o ID informado não existe. Deseja criar uma solicitação de teste com esse ID?',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonText: 'Sim, criar',
+              cancelButtonText: 'Não, voltar',
+              customClass: {
+                confirmButton: 'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+                cancelButton: 'bg-gray-400 text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-gray-500',
+              },
+            });
+            
+            if (result.isConfirmed) {
+              // Tentar criar a solicitação de teste
+              try {
+                const createResponse = await fetch('/api/requests/create-test', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ requestId })
+                });
+                
+                if (!createResponse.ok) {
+                  throw new Error(`Erro ao criar solicitação: ${createResponse.status}`);
+                }
+                
+                const createResult = await createResponse.json();
+                console.log('Solicitação de teste criada:', createResult);
+                
+                // Recarregar a página para usar a nova solicitação
+                window.location.reload();
+                return;
+              } catch (createError) {
+                console.error('Erro ao criar solicitação de teste:', createError);
+                Swal.fire({
+                  title: 'Erro',
+                  text: 'Não foi possível criar a solicitação de teste.',
+                  icon: 'error',
+                  customClass: {
+                    confirmButton: 'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+                  },
+                });
+                throw new Error('Erro ao criar solicitação de teste');
+              }
+            } else {
+              // Redirecionar para a página anterior ou uma página segura
+              router.push('/solicitacoes');
+              throw new Error('Solicitação não encontrada');
+            }
+          } else {
+            throw new Error(`Erro ao verificar solicitação: ${verifyResponse.status}`);
+          }
+        }
+        
+        console.log(`Buscando dados da solicitação: /api/requests/${actualRequestId}`);
+        
+        // Se a solicitação existir, continuamos com a busca dos dados completos
+        const response = await fetch(`/api/requests/${actualRequestId}`);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Erro na resposta da API (${response.status}):`, errorText);
+          
+          // Se a solicitação não foi encontrada, mostrar um alerta ao usuário
+          if (response.status === 404) {
+            Swal.fire({
+              title: 'Solicitação não encontrada',
+              text: 'A solicitação com o ID informado não existe no sistema.',
+              icon: 'error',
+              customClass: {
+                confirmButton: 'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+              },
+            });
+          }
+          
+          throw new Error(`Erro ao buscar dados da solicitação: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Log para debug
+        console.log('Dados da solicitação recebidos:', data);
+        
+        // Adicionar log para ver toda a estrutura da resposta
+        console.log('Estrutura completa da resposta:', JSON.stringify(data, null, 2));
+        
+        // Preencher os campos com os dados do paciente
+        if (data.pacient) {
+          console.log('Dados do paciente encontrados:', data.pacient);
+          setValue('nomeBeneficiario', data.pacient.name || '');
+          setValue('precCpMatriculaCpf', data.pacient.precCp || data.pacient.cpf || '');
+          setValue('postoGraduacaoTitular', data.pacient.rank || '');
+        } else {
+          console.warn('Dados do paciente não encontrados na resposta da API');
+        }
+        
+        // Se tivermos uma idade diretamente na solicitação
+        if (data.pacientAge) {
+          console.log('Usando idade da solicitação:', data.pacientAge);
+          setValue('idade', data.pacientAge.toString());
+        }
+        // Se tivermos data de nascimento, calcular idade
+        else if (data.pacient?.birthDate) {
+          console.log('Calculando idade a partir da data de nascimento:', data.pacient.birthDate);
+          const birthDate = new Date(data.pacient.birthDate);
+          const today = new Date();
+          let age = today.getFullYear() - birthDate.getFullYear();
+          const monthDiff = today.getMonth() - birthDate.getMonth();
+          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+          }
+          setValue('idade', age.toString());
+        } else {
+          // Se não tivermos nenhuma informação de idade, usar string vazia
+          console.warn('Nenhuma informação de idade encontrada');
+          setValue('idade', '');
+        }
+        
+        // Verificar se necessita acompanhante
+        setValue('necessitaAcompanhante', data.needsCompanion ? 'sim' : 'nao');
+        
+        // Se a solicitação tiver uma descrição, usá-la como consulta/exame
+        if (data.description) {
+          setValue('consultaExame', data.description);
+        }
+        
+        // Se tiver código CBHPM, incluí-lo na descrição do exame
+        if (data.cbhpmCode) {
+          const currentExame = data.description || '';
+          setValue('consultaExame', `${currentExame} (Código CBHPM: ${data.cbhpmCode})`.trim());
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados da solicitação:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    // Debug da condição
+    console.log('Condição para buscar dados:', { requestId, formularioId, shouldFetch: requestId && typeof requestId === 'string' });
+    
+    // Buscar dados sempre que tivermos um ID de solicitação válido
+    if (requestId && typeof requestId === 'string') {
+      fetchRequestData();
+    }
+  }, [requestId, setValue]);
+
   // Buscar dados do formulário quando houver um formularioId
   useEffect(() => {
     const fetchFormulario = async () => {
@@ -175,7 +378,7 @@ export default function FormularioMedicoParte1() {
       };
       
       // Verificar se estamos editando um formulário existente ou criando um novo
-      const isEditing = formularioId !== undefined;
+      const isEditing = formularioId !== undefined && formularioId !== null;
       
       // Enviar para a API de cadastro com o ID da solicitação
       // Isso salva os dados na tabela FormularioMedico com referência à solicitação (requestId)
@@ -254,7 +457,7 @@ export default function FormularioMedicoParte1() {
               <div className="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-verde" role="status">
                 <span className="visually-hidden">Carregando...</span>
               </div>
-              <span className="ml-2">Carregando dados do formulário...</span>
+              <span className="ml-2">Carregando dados do {formularioId ? 'formulário' : 'paciente'}...</span>
             </div>
           </Card>
         ) : (
