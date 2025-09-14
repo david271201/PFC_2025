@@ -74,7 +74,8 @@ const FormularioActionButton: React.FC<FormularioActionButtonProps> = ({ request
       
       // Verificando se o ID é válido antes de redirecionar
       if (requestId && typeof requestId === 'string' && requestId.trim() !== '') {
-        window.location.href = `/equipamentos/cadastro-parte2?requestId=${requestId}`;
+        window.location.href = `/cadastro-med/cadastro-parte2?requestId=${requestId}`;
+        console.log(`Redirecionando para: /cadastro-med/cadastro-parte2?requestId=${requestId}`);
       } else {
         console.error("ID de solicitação inválido:", requestId);
         alert("Erro: ID da solicitação não encontrado ou inválido.");
