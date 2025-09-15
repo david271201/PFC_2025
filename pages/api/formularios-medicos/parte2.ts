@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import { auth } from '../../../auth';
-import prisma from '../../../prisma/prismaClient';
+import { auth } from '@@/auth';
+import prisma from '@@/prisma/prismaClient';
 import { UserType } from '@/permissions/utils';
 
 // Schema para validação da segunda parte do formulário médico

@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { auth } from '../../../auth';
-import prisma from '../../../prisma/prismaClient';
+import { auth } from '@@/auth';
+import prisma from '@@/prisma/prismaClient';
 import { Role } from '@prisma/client';
 import { UserType } from '@/permissions/utils';
 import { z } from 'zod';
