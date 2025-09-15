@@ -10,13 +10,17 @@ export default async function handler(
 ) {
   // Log para debug da sessão
   console.log('=== API Chefe Secao Regional ===');
+  console.log('Método da requisição:', req.method);
+  console.log('Headers completos:', JSON.stringify(req.headers, null, 2));
   console.log('Cookies recebidos:', req.headers.cookie);
+  console.log('Body da requisição:', JSON.stringify(req.body, null, 2));
   
   const session = await auth(req, res);
   console.log('Resultado da autenticação:', session ? 'Sessão encontrada' : 'Nenhuma sessão');
   if (session?.user) {
     console.log('Usuário autenticado:', session.user.email);
-    console.log('Informações do usuário:', JSON.stringify(session.user, null, 2));
+    console.log('Informações do usuário completas:', JSON.stringify(session.user, null, 2));
+    console.log('Tipo do usuário:', typeof session.user);
   }
   
   if (!session?.user) {
@@ -24,8 +28,32 @@ export default async function handler(
     return res.status(401).json({ message: 'Usuário não autenticado' });
   }
 
-  const user = session.user as UserType;
-  console.log('Papel do usuário autenticado:', user.role);
+  // Acessar informações do usuário de forma mais segura
+  try {
+    // Primeiro verificamos se session.user existe
+    if (!session.user) {
+      console.log('Session existe mas user é undefined');
+      return res.status(401).json({ message: 'Informações de usuário não encontradas na sessão' });
+    }
+
+    // Extrair userId e role diretamente como em chefe-div-medicina.ts
+    const userId = (session.user as any).userId || session.user.id;
+    const userRole = (session.user as any).role;
+    
+    console.log('userId extraído:', userId);
+    console.log('userRole extraído:', userRole);
+    
+    if (!userId) {
+      console.log('userId não encontrado na sessão');
+      return res.status(401).json({ message: 'ID do usuário não encontrado na sessão' });
+    }
+
+    // Não precisamos mais fazer o cast para UserType, já que estamos usando as propriedades diretamente
+    console.log('Papel do usuário autenticado:', userRole);
+  } catch (error) {
+    console.error('Erro ao extrair informações do usuário:', error);
+    return res.status(500).json({ message: 'Erro ao processar informações do usuário' });
+  }
   
   // Verificar se o usuário tem o papel correto - temporariamente desativado para testes
   /* 
@@ -46,11 +74,20 @@ export default async function handler(
       }
 
       // Verificar se o usuário está autenticado
-      if (!session.user || !session.user.id) {
+      // Garantir que temos as informações do usuário para o log
+      if (!session.user) {
         return res.status(401).json({ message: 'Usuário não autenticado' });
       }
       
-      const userId = session.user.id;
+      // Extrair userId usando a mesma lógica que usamos acima
+      const userId = (session.user as any).userId || session.user.id;
+      
+      console.log('userId para a ação:', userId);
+      
+      if (!userId) {
+        console.error('ID do usuário não encontrado na sessão para registrar a ação');
+        return res.status(401).json({ message: 'ID do usuário não encontrado na sessão' });
+      }
       
       // Buscar formulário para verificar aprovação
       const formulario = await prisma.formularioMedico.findUnique({

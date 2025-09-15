@@ -44,9 +44,6 @@ const formularioMedicoParte2Schema = z.object({
     return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(val);
   }, { message: "Formato de horário inválido. Use o formato HH:MM" }),
   
-  // Observações
-  observacoes: z.string().optional(),
-  
   // Aprovação do checklist
   aprovacao: z.boolean().optional(),
 });
@@ -153,7 +150,6 @@ export default function FormularioMedicoParte2() {
               horario3: formularioData.horario3 || '',
               motorista4: formularioData.motorista4 || '',
               horario4: formularioData.horario4 || '',
-              observacoes: formularioData.observacoes || '',
               aprovacao: formularioData.aprovacao || false
             });
           }
@@ -217,7 +213,6 @@ export default function FormularioMedicoParte2() {
           horario3: data.horario3 || '',
           motorista4: data.motorista4 || '',
           horario4: data.horario4 || '',
-          observacoes: data.observacoes || '',
           aprovacao: data.aprovacao || false
         });
       } catch (error) {
@@ -356,7 +351,7 @@ export default function FormularioMedicoParte2() {
         horario3: data.horario3,
         motorista4: data.motorista4,
         horario4: data.horario4,
-        observacoes: data.observacoes,
+        // observacoes: data.observacoes,
         aprovacao: data.aprovacao,
         
         // ID da solicitação e parte do formulário
@@ -401,91 +396,85 @@ export default function FormularioMedicoParte2() {
       }
       
       const formularioData = responseData || {};
-      console.log('Formulário salvo com sucesso:', formularioData);
+      console.log('Formulário foi salvo com sucesso, agora vamos usar o novo endpoint único para processamento');
       
-      // Atualizar o fluxo da solicitação através da API de avaliação
-      // Este endpoint irá atualizar o status da solicitação para o próximo passo do fluxo
-      console.log('Preparando payload para API de avaliação com formularioId:', formularioData.id);
+      // Modificando para usar o novo endpoint combinado que processa o formulário e atualiza o status
+      console.log('Preparando dados para o endpoint combinado...');
       
-      const avaliacaoPayload = {
-        requestId: requestIdStr,
-        formularioId: formularioData.id,
-        aprovado: data.aprovacao
-      };
-      
-      console.log('Enviando requisição para /api/avaliacoes/chefe-secao-regional com payload:', avaliacaoPayload);
-      
-      // Verificar se o cookie da sessão está disponível
-      const cookies = document.cookie;
-      console.log('Cookies disponíveis antes de enviar avaliação:', cookies);
-      
-      // Verificar autenticação atual
-      try {
-        const sessionCheckResponse = await fetch('/api/auth/session');
-        const sessionData = await sessionCheckResponse.json();
-        console.log('Status da sessão atual:', sessionCheckResponse.status);
-        console.log('Dados da sessão:', sessionData);
-      } catch (error) {
-        console.error('Erro ao verificar sessão:', error);
-      }
+      // Enviamos o payload completo diretamente para o novo endpoint
+      console.log('Enviando para endpoint unificado com formularioId:', formularioData.id);
       
       try {
-        // Tentar buscar um token JWT da sessão, se disponível
-        let authHeaders = {
-          'Content-Type': 'application/json',
+        console.log('Chamando o novo endpoint unificado /api/formularios-medicos/processar-chefe-secao-regional');
+        
+        // Reusamos o payload original, apenas atualizamos o ID do formulário que acabou de ser salvo
+        const processoPayload = {
+          ...payload,  // Reutilizar o payload original do formulário
+          id: formularioData.id  // Usar o ID retornado pelo save do formulário
         };
         
-        // Agora fazemos a chamada à API com cabeçalhos atualizados
-        console.log('Enviando requisição com headers:', JSON.stringify(authHeaders));
-        const avaliacaoResponse = await fetch('/api/avaliacoes/chefe-secao-regional', {
+        console.log('Payload para o endpoint unificado:', JSON.stringify(processoPayload, null, 2));
+        
+        const processoResponse = await fetch('/api/formularios-medicos/processar-chefe-secao-regional', {
           method: 'POST',
-          headers: authHeaders,
-          credentials: 'include', // Importante: incluir credenciais (cookies) na requisição
-          body: JSON.stringify(avaliacaoPayload),
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify(processoPayload)
         });
         
-        console.log('Status da resposta da API de avaliação:', avaliacaoResponse.status);
+        console.log('Status da resposta do endpoint unificado:', processoResponse.status);
         
-        // Capturar o texto da resposta para debug
-        const avaliacaoResponseText = await avaliacaoResponse.text();
-        console.log('Resposta da API de avaliação (texto bruto):', avaliacaoResponseText);
+        const processoResponseText = await processoResponse.text();
+        console.log('Resposta do endpoint unificado (texto):', processoResponseText);
         
-        // Tentar analisar como JSON (apenas se houver conteúdo)
-        let avaliacaoResponseData;
+        let processoData;
         try {
-          if (avaliacaoResponseText) {
-            avaliacaoResponseData = JSON.parse(avaliacaoResponseText);
+          if (processoResponseText) {
+            processoData = JSON.parse(processoResponseText);
+            console.log('Resposta do endpoint unificado (JSON):', processoData);
           }
         } catch (parseError) {
-          console.error('Erro ao analisar resposta JSON da avaliação:', parseError);
-          console.log('Texto da resposta que causou erro:', avaliacaoResponseText);
+          console.error('Erro ao analisar JSON da resposta:', parseError);
         }
         
-        if (!avaliacaoResponse.ok) {
-          console.error('Erro na resposta da API de avaliação:', avaliacaoResponseData || avaliacaoResponseText);
+        if (!processoResponse.ok) {
+          console.error('Erro no processamento unificado:', processoData || processoResponseText);
           
-          // Se for erro de autenticação, tratamos de forma diferente
-          if (avaliacaoResponse.status === 401) {
-            console.warn('Erro de autenticação ao enviar avaliação. Formulário foi salvo, mas o fluxo não foi atualizado.');
-            
-            // Mostramos uma mensagem especial ao usuário
-            Swal.fire({
-              title: 'Formulário Salvo',
-              text: 'O formulário foi salvo com sucesso, mas não foi possível atualizar o status da solicitação. Pode ser necessário fazer login novamente.',
-              icon: 'warning',
-              customClass: {
-                confirmButton:
-                  'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
-              },
-            }).then(() => {
-              router.push('/solicitacoes');
-            });
-            
-            return; // Saímos sem lançar erro, pois o formulário já foi salvo
-          }
+          // Mostramos uma mensagem especial ao usuário
+          Swal.fire({
+            title: 'Formulário Salvo Parcialmente',
+            text: 'O formulário foi salvo, mas houve um erro ao processar a solicitação. Um administrador precisará verificar.',
+            icon: 'warning',
+            customClass: {
+              confirmButton:
+                'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+            },
+          }).then(() => {
+            router.push('/solicitacoes');
+          });
           
-          throw new Error((avaliacaoResponseData && avaliacaoResponseData.message) || 'Erro ao atualizar status da solicitação');
+          return; // Saímos sem lançar erro, pois o formulário já foi salvo
         }
+        
+        // Se chegou aqui, tudo deu certo!
+        // Exibir mensagem de sucesso completo
+        Swal.fire({
+          title: 'Sucesso',
+          text: data.aprovacao 
+            ? 'Formulário médico enviado e solicitação aprovada com sucesso'
+            : 'Formulário médico enviado e solicitação reprovada com sucesso',
+          icon: 'success',
+          customClass: {
+            confirmButton:
+              'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+          },
+        }).then(() => {
+          router.push('/solicitacoes');
+        });
+        
+        return; // Encerrar processamento com sucesso
       } catch (error) {
         console.error('Falha ao chamar API de avaliação:', error);
         // Se chegamos aqui, o formulário já foi salvo mas a avaliação falhou
@@ -752,6 +741,7 @@ export default function FormularioMedicoParte2() {
                   <li className="mb-2">Caso haja necessidade de deslocamentos adicionais, o serviço social organizará o cronograma, conforme a escala dos motoristas da UAL de destino.</li>
                 </ol>
                 
+                {/* Observações field removed because it doesn't exist in the database model */}
                 <div className="mt-4">
                   <label className="mb-1 block text-sm font-medium text-grafite">
                     Observações adicionais:
@@ -759,8 +749,8 @@ export default function FormularioMedicoParte2() {
                   <textarea
                     rows={4}
                     className="w-full rounded-md border border-cinzaClaro px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none"
-                    {...register('observacoes')}
-                    placeholder="Insira observações adicionais aqui, se necessário"
+                    disabled
+                    placeholder="Campo não disponível neste formulário"
                   ></textarea>
                 </div>
               </div>

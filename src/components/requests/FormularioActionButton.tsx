@@ -86,8 +86,6 @@ const FormularioActionButton: React.FC<FormularioActionButtonProps> = ({ request
   let buttonText = 'Preencher Formulário';
   if (shouldShowChefeDiv) {
     buttonText = 'Preencher Formulário OMS Destino';
-  } else if (shouldShowChem) {
-    buttonText = 'Preencher Formulário DSAU';
   } else if (shouldShowChefeSecReg) {
     buttonText = 'Preencher Formulário RM Destino';
   }
