@@ -9,6 +9,10 @@ export default auth((req) => {
   const url = req.nextUrl.clone();
   const isLoggedIn = !!req.auth;
 
+  // Log para debug de autenticação
+  console.log(`Middleware - Path: ${url.pathname} - Autenticado: ${isLoggedIn}`);
+  
+  // Não interceptamos rotas de API, permitindo que elas façam sua própria verificação de auth
   if (url.pathname.includes('/api/')) {
     return;
   }

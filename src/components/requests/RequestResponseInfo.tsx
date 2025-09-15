@@ -13,6 +13,7 @@ import {
 import { useState } from 'react';
 import Button from '../common/button';
 import Input, { formatCurrency } from '../common/input';
+import CurrencyInput from '../common/input/CurrencyInput';
 import modal from '../common/modal';
 
 const responseFormSchema = z.object({
@@ -55,10 +56,7 @@ export default function RequestResponseInfo({
     setSelectedFiles(selectedFiles.filter((f) => f.name !== file.name));
   };
 
-  const handleCurrencyChange = (value: string, fieldOnChange: any) => {
-    const intValue = parseInt(value.replace(/\D/g, ''), 10);
-    fieldOnChange(intValue);
-  };
+  // Não precisamos mais dessa função pois o CurrencyInput lida com a formatação internamente
 
   const onSubmit = async (data: ResponseFormDataType) => {
     const formData = new FormData();
@@ -112,13 +110,10 @@ export default function RequestResponseInfo({
           rules={{ required: true }}
           defaultValue={0}
           render={({ field }) => (
-            <Input
+            <CurrencyInput
               label="Custo do procedimento"
-              type="text"
-              value={formatCurrency(field.value)}
-              onChange={(e) =>
-                handleCurrencyChange(e.target.value, field.onChange)
-              }
+              value={field.value}
+              onChange={field.onChange}
               disabled={!!requestResponse}
             />
           )}
@@ -130,13 +125,10 @@ export default function RequestResponseInfo({
         rules={{ required: true }}
         defaultValue={0}
         render={({ field }) => (
-          <Input
+          <CurrencyInput
             label="Custo de OPME"
-            type="text"
-            value={formatCurrency(field.value)}
-            onChange={(e) =>
-              handleCurrencyChange(e.target.value, field.onChange)
-            }
+            value={field.value}
+            onChange={field.onChange}
             disabled={!!requestResponse}
           />
         )}
@@ -148,13 +140,10 @@ export default function RequestResponseInfo({
           rules={{ required: true }}
           defaultValue={0}
           render={({ field }) => (
-            <Input
+            <CurrencyInput
               label="Custo passagem"
-              type="text"
-              value={formatCurrency(field.value || 0)}
-              onChange={(e) =>
-                handleCurrencyChange(e.target.value, field.onChange)
-              }
+              value={field.value || 0}
+              onChange={field.onChange}
               disabled={!!requestResponse}
             />
           )}

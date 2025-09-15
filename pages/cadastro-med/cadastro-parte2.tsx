@@ -5,10 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 
-import Layout from '@/components/layout/Layout';
 import Card from '@/components/common/card';
 import Button from '@/components/common/button';
-import Select from '@/components/common/select';
 import SpinLoading from '@/components/common/loading/SpinLoading';
 import { auth } from '../../auth';
 import { GetServerSidePropsContext } from 'next';
@@ -16,7 +14,11 @@ import { checkPermission, UserType } from '@/permissions/utils';
 
 // Schema para validação da segunda parte do formulário
 const formularioMedicoParte2Schema = z.object({
-  hotelReservado: z.string().transform((val) => val === "sim"),
+  hotelReservado: z.union([
+    z.string().transform((val) => val === "sim"),
+    z.boolean(),
+    z.undefined().transform(() => false)
+  ]),
   justificativaHotelReservado: z.string().optional(),
   
   // Campos de Traslado
@@ -79,22 +81,33 @@ export default function FormularioMedicoParte2() {
     defaultValues: {
       hotelReservado: false,
       aprovacao: false,
-    }
+    },
+    mode: 'onBlur', // Validar ao perder o foco
+    reValidateMode: 'onChange' // Revalidar ao mudar valores
   });
 
   // Buscar dados da solicitação para preencher informações contextuais
   useEffect(() => {
-    console.log('=== Página de cadastro médico - Parte 2 ===');
+    console.log('=== Página de cadastro médico - Parte 2 (INICIALIZAÇÃO) ===');
     console.log('URL atual:', typeof window !== 'undefined' ? window.location.href : 'N/A');
     console.log('URL search params:', typeof window !== 'undefined' ? window.location.search : 'N/A');
     console.log('Router query params completos:', router.query);
     console.log('Request ID recebido do router:', requestId);
+    console.log('Formulario ID recebido do router:', formularioId);
     console.log('Tipo do requestId:', typeof requestId);
+    
+    // Verificar se o router está pronto
+    if (!router.isReady) {
+      console.log('Router ainda não está pronto, aguardando...');
+      return;
+    }
     
     // Tentar obter o ID diretamente da URL também
     const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
     const requestIdFromUrl = urlParams.get('requestId');
+    const formularioIdFromUrl = urlParams.get('formularioId');
     console.log('Request ID obtido diretamente da URL:', requestIdFromUrl);
+    console.log('Formulario ID obtido diretamente da URL:', formularioIdFromUrl);
     
     const fetchRequestData = async () => {
       if (!requestId && !requestIdFromUrl) {
@@ -153,11 +166,25 @@ export default function FormularioMedicoParte2() {
     };
     
     // Debug da condição
-    console.log('Condição para buscar dados:', { requestId, formularioId, shouldFetch: requestId && typeof requestId === 'string' });
+    console.log('Condição para buscar dados:', { 
+      requestId, 
+      formularioId, 
+      shouldFetch: requestId && (typeof requestId === 'string' || Array.isArray(requestId)),
+      routerIsReady: router.isReady
+    });
     
-    // Buscar dados sempre que tivermos um ID de solicitação válido
-    if (requestId && typeof requestId === 'string') {
+    // Obter o requestId correto, dando preferência para o valor da URL
+    const actualRequestId = requestIdFromUrl || 
+                          (Array.isArray(requestId) ? requestId[0] : requestId);
+    
+    console.log('ID de solicitação final para uso:', actualRequestId);
+    
+    // Buscar dados sempre que tivermos um ID de solicitação válido e o router estiver pronto
+    if (router.isReady && actualRequestId) {
+      console.log('Iniciando busca de dados com requestId:', actualRequestId);
       fetchRequestData();
+    } else {
+      console.log('Não foi possível buscar dados: router não pronto ou requestId inválido');
     }
   }, [requestId, reset, router]);
 
@@ -215,21 +242,60 @@ export default function FormularioMedicoParte2() {
   }, [formularioId, reset, router]);
 
   const handleRadioChange = (fieldName: keyof FormularioMedicoParte2Data, value: string) => {
-    setValue(fieldName, value === "sim");
+    // Definimos o valor como booleano diretamente, já que o schema foi atualizado para aceitar boolean
+    setValue(fieldName, value === "sim", { shouldValidate: true, shouldDirty: true });
+    console.log(`Campo ${fieldName} alterado para:`, value === "sim", '(valor original:', value, ')');
   };
 
   const onSubmit = async (data: FormularioMedicoParte2Data) => {
     setIsSubmitting(true);
+    console.log('=== Início do envio do formulário (Parte 2) ===');
     console.log('Dados do formulário a serem enviados:', data);
+    console.log('hotelReservado:', data.hotelReservado, typeof data.hotelReservado);
+    console.log('URL atual no momento do submit:', typeof window !== 'undefined' ? window.location.href : 'N/A');
+    console.log('Query params no momento do submit:', router.query);
+    console.log('RequestId do router:', requestId);
+    console.log('FormularioId do router:', formularioId);
     
     try {
       if (!requestId) {
+        console.error('ID da solicitação não fornecido no momento do submit!');
         throw new Error('ID da solicitação não fornecido');
       }
       
-      // Verificar se estamos editando um formulário existente ou criando um novo
-      const isEditing = formularioId !== undefined && formularioId !== null;
+      // Obter o requestId correto (considerando que pode ser um array)
+      const requestIdStr = Array.isArray(requestId) ? requestId[0] : requestId as string;
+      console.log('RequestId normalizado para uso:', requestIdStr);
+      
+      // Buscar primeiro se já existe um formulário para este requestId
+      let existingFormId: string | undefined = undefined;
+      try {
+        console.log('Buscando formulário existente para o requestId:', requestIdStr);
+        const formularioExistenteResponse = await fetch(`/api/formularios-medicos/${requestIdStr}?parte=RM_DESTINO`);
+        
+        if (formularioExistenteResponse.ok) {
+          const formularioExistente = await formularioExistenteResponse.json();
+          console.log('Resposta da API de formulário existente:', formularioExistente);
+          
+          // Verificar se temos um array ou um objeto único
+          if (Array.isArray(formularioExistente) && formularioExistente.length > 0) {
+            // Usar o primeiro formulário da lista
+            existingFormId = formularioExistente[0].id;
+            console.log('Múltiplos formulários encontrados, usando o ID do primeiro:', existingFormId);
+          } else if (formularioExistente && formularioExistente.id) {
+            // Objeto único
+            existingFormId = formularioExistente.id;
+            console.log('Formulário existente encontrado:', existingFormId);
+          }
+        }
+      } catch (error) {
+        console.warn('Erro ao buscar formulário existente:', error);
+      }
+      
+      // Agora definimos que estamos sempre em modo de edição se encontramos um formulário
+      const isEditing = existingFormId !== undefined || (formularioId !== undefined && formularioId !== null);
       console.log('Modo de edição:', isEditing ? 'Editando formulário existente' : 'Criando novo formulário');
+      console.log('Tipo do requestId:', typeof requestId, 'Valor:', requestId);
       
       // Buscar dados do paciente para preenchimento adequado
       let pacientData = {
@@ -243,7 +309,8 @@ export default function FormularioMedicoParte2() {
       
       // Tentar buscar dados reais do paciente da solicitação
       try {
-        const requestResponse = await fetch(`/api/requests/${requestId}/index`);
+        // Corrigindo para usar o endpoint correto para dados da solicitação
+        const requestResponse = await fetch(`/api/requests/${requestIdStr}`);
         if (requestResponse.ok) {
           const requestData = await requestResponse.json();
           if (requestData.pacient) {
@@ -260,73 +327,186 @@ export default function FormularioMedicoParte2() {
         }
       } catch (error) {
         console.warn('Não foi possível obter dados do paciente:', error);
+        // Continua com os dados default mesmo se não conseguir buscar os dados reais
       }
       
+      // Preparar payload para API
+      // O requestIdStr já foi normalizado acima
+      console.log('RequestId que será enviado para API:', requestIdStr);
+      
+      // Determinar o ID a ser usado para atualização (prioridade: existingFormId > formularioId)
+      const formId = existingFormId || (Array.isArray(formularioId) ? formularioId[0] : formularioId as string);
+      console.log('ID do formulário que será usado para atualização:', formId);
+      
+      const payload = {
+        // ID para atualização - agora usamos o ID encontrado via requestId quando possível
+        id: formId,
+        
+        // Dados do beneficiário (obrigatórios na estrutura)
+        ...pacientData,
+        
+        // Campos da parte 2
+        justificativaHotelReservado: data.justificativaHotelReservado, // Campo já alinhado com a API
+        hotelReservado: data.hotelReservado,
+        motorista1: data.motorista1,
+        horario1: data.horario1,
+        motorista2: data.motorista2,
+        horario2: data.horario2,
+        motorista3: data.motorista3,
+        horario3: data.horario3,
+        motorista4: data.motorista4,
+        horario4: data.horario4,
+        observacoes: data.observacoes,
+        aprovacao: data.aprovacao,
+        
+        // ID da solicitação e parte do formulário
+        requestId: requestIdStr,
+        parte: 'RM_DESTINO'
+      };
+      
+      console.log('Payload completo que será enviado à API:', payload);
+      
       // Enviar para a API de cadastro com o ID da solicitação
+      console.log('Enviando requisição para /api/formularios-medicos/cadastrar...');
+      console.log('Valor do hotelReservado sendo enviado:', payload.hotelReservado, typeof payload.hotelReservado);
       const formularioResponse = await fetch('/api/formularios-medicos/cadastrar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          // ID para atualização, se existir
-          id: isEditing ? formularioId : undefined,
-          
-          // Dados do beneficiário (obrigatórios na estrutura)
-          ...pacientData,
-          
-          // Campos da parte 2
-          justificativaHotelReservado: data.justificativaHotelReservado, // Campo já alinhado com a API
-          hotelReservado: data.hotelReservado,
-          motorista1: data.motorista1,
-          horario1: data.horario1,
-          motorista2: data.motorista2,
-          horario2: data.horario2,
-          motorista3: data.motorista3,
-          horario3: data.horario3,
-          motorista4: data.motorista4,
-          horario4: data.horario4,
-          observacoes: data.observacoes,
-          aprovacao: data.aprovacao,
-          
-          // ID da solicitação e parte do formulário
-          requestId: Array.isArray(requestId) ? requestId[0] : requestId as string,
-          parte: 'RM_DESTINO'
-        }),
+        credentials: 'include', // Incluir credenciais (cookies) na requisição
+        body: JSON.stringify(payload),
       });
 
-      if (!formularioResponse.ok) {
-        const error = await formularioResponse.json();
-        console.error('Erro na resposta da API de cadastro:', error);
-        throw new Error(error.message || 'Erro ao enviar formulário médico');
+      console.log('Status da resposta da API:', formularioResponse.status);
+      
+      // Capturar o texto da resposta primeiro para debug
+      const responseText = await formularioResponse.text();
+      console.log('Resposta da API (texto bruto):', responseText);
+      
+      // Tentar analisar como JSON (apenas se houver conteúdo)
+      let responseData;
+      try {
+        if (responseText) {
+          responseData = JSON.parse(responseText);
+        }
+      } catch (parseError) {
+        console.error('Erro ao analisar resposta JSON:', parseError);
+        console.log('Texto da resposta que causou erro:', responseText);
       }
       
-      const formularioData = await formularioResponse.json();
+      if (!formularioResponse.ok) {
+        console.error('Erro na resposta da API de cadastro:', responseData || responseText);
+        throw new Error((responseData && responseData.message) || 'Erro ao enviar formulário médico');
+      }
+      
+      const formularioData = responseData || {};
       console.log('Formulário salvo com sucesso:', formularioData);
       
       // Atualizar o fluxo da solicitação através da API de avaliação
       // Este endpoint irá atualizar o status da solicitação para o próximo passo do fluxo
-      const avaliacaoResponse = await fetch('/api/avaliacoes/chefe-secao-regional', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          requestId: Array.isArray(requestId) ? requestId[0] : requestId as string,
-          formularioId: formularioData.id,
-          aprovado: data.aprovacao
-        }),
-      });
+      console.log('Preparando payload para API de avaliação com formularioId:', formularioData.id);
       
-      if (!avaliacaoResponse.ok) {
-        const error = await avaliacaoResponse.json();
-        console.error('Erro na resposta da API de avaliação:', error);
-        throw new Error(error.message || 'Erro ao atualizar status da solicitação');
+      const avaliacaoPayload = {
+        requestId: requestIdStr,
+        formularioId: formularioData.id,
+        aprovado: data.aprovacao
+      };
+      
+      console.log('Enviando requisição para /api/avaliacoes/chefe-secao-regional com payload:', avaliacaoPayload);
+      
+      // Verificar se o cookie da sessão está disponível
+      const cookies = document.cookie;
+      console.log('Cookies disponíveis antes de enviar avaliação:', cookies);
+      
+      // Verificar autenticação atual
+      try {
+        const sessionCheckResponse = await fetch('/api/auth/session');
+        const sessionData = await sessionCheckResponse.json();
+        console.log('Status da sessão atual:', sessionCheckResponse.status);
+        console.log('Dados da sessão:', sessionData);
+      } catch (error) {
+        console.error('Erro ao verificar sessão:', error);
       }
       
-      const avaliacaoData = await avaliacaoResponse.json();
-      console.log('Avaliação processada com sucesso:', avaliacaoData);
-
+      try {
+        // Tentar buscar um token JWT da sessão, se disponível
+        let authHeaders = {
+          'Content-Type': 'application/json',
+        };
+        
+        // Agora fazemos a chamada à API com cabeçalhos atualizados
+        console.log('Enviando requisição com headers:', JSON.stringify(authHeaders));
+        const avaliacaoResponse = await fetch('/api/avaliacoes/chefe-secao-regional', {
+          method: 'POST',
+          headers: authHeaders,
+          credentials: 'include', // Importante: incluir credenciais (cookies) na requisição
+          body: JSON.stringify(avaliacaoPayload),
+        });
+        
+        console.log('Status da resposta da API de avaliação:', avaliacaoResponse.status);
+        
+        // Capturar o texto da resposta para debug
+        const avaliacaoResponseText = await avaliacaoResponse.text();
+        console.log('Resposta da API de avaliação (texto bruto):', avaliacaoResponseText);
+        
+        // Tentar analisar como JSON (apenas se houver conteúdo)
+        let avaliacaoResponseData;
+        try {
+          if (avaliacaoResponseText) {
+            avaliacaoResponseData = JSON.parse(avaliacaoResponseText);
+          }
+        } catch (parseError) {
+          console.error('Erro ao analisar resposta JSON da avaliação:', parseError);
+          console.log('Texto da resposta que causou erro:', avaliacaoResponseText);
+        }
+        
+        if (!avaliacaoResponse.ok) {
+          console.error('Erro na resposta da API de avaliação:', avaliacaoResponseData || avaliacaoResponseText);
+          
+          // Se for erro de autenticação, tratamos de forma diferente
+          if (avaliacaoResponse.status === 401) {
+            console.warn('Erro de autenticação ao enviar avaliação. Formulário foi salvo, mas o fluxo não foi atualizado.');
+            
+            // Mostramos uma mensagem especial ao usuário
+            Swal.fire({
+              title: 'Formulário Salvo',
+              text: 'O formulário foi salvo com sucesso, mas não foi possível atualizar o status da solicitação. Pode ser necessário fazer login novamente.',
+              icon: 'warning',
+              customClass: {
+                confirmButton:
+                  'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+              },
+            }).then(() => {
+              router.push('/solicitacoes');
+            });
+            
+            return; // Saímos sem lançar erro, pois o formulário já foi salvo
+          }
+          
+          throw new Error((avaliacaoResponseData && avaliacaoResponseData.message) || 'Erro ao atualizar status da solicitação');
+        }
+      } catch (error) {
+        console.error('Falha ao chamar API de avaliação:', error);
+        // Se chegamos aqui, o formulário já foi salvo mas a avaliação falhou
+        // Mostramos uma mensagem ao usuário de qualquer forma
+        Swal.fire({
+          title: 'Formulário Salvo',
+          text: 'O formulário foi salvo com sucesso, mas houve um erro ao atualizar o status da solicitação.',
+          icon: 'warning',
+          customClass: {
+            confirmButton:
+              'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+          },
+        }).then(() => {
+          router.push('/solicitacoes');
+        });
+        
+        return; // Saímos sem lançar erro, pois o formulário já foi salvo
+      }
+      
+      // Esta linha está agora movida para dentro do bloco try acima
+      // Formulário foi salvo com sucesso, e se chegarmos aqui a avaliação também foi bem-sucedida
       Swal.fire({
         title: 'Sucesso',
         text: 'Formulário médico enviado com sucesso e avaliação concluída',
@@ -339,7 +519,16 @@ export default function FormularioMedicoParte2() {
         router.push('/solicitacoes');
       });
     } catch (error) {
-      console.error('Erro ao processar formulário:', error);
+      console.error('=== ERRO AO PROCESSAR FORMULÁRIO ===');
+      console.error('Detalhes do erro:', error);
+      if (error instanceof Error) {
+        console.error('Mensagem do erro:', error.message);
+        console.error('Stack trace:', error.stack);
+      }
+      console.error('Dados que estavam sendo enviados:', data);
+      console.error('RequestId no momento do erro:', requestId);
+      console.error('FormularioId no momento do erro:', formularioId);
+      
       Swal.fire({
         title: 'Erro',
         text: error instanceof Error ? error.message : 'Erro ao enviar formulário médico',
@@ -350,6 +539,8 @@ export default function FormularioMedicoParte2() {
         },
       });
     } finally {
+      console.log('=== Fim do processamento do formulário ===');
+      console.log('Status final:', isSubmitting ? 'Ainda processando' : 'Processamento finalizado');
       setIsSubmitting(false);
     }
   };
@@ -364,7 +555,12 @@ export default function FormularioMedicoParte2() {
           </div>
         ) : (
         <Card>
-          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-7 gap-4">
+          <form 
+            onSubmit={handleSubmit(onSubmit)} 
+            className="grid grid-cols-7 gap-4"
+            onClick={(e) => {
+              console.log('Elemento clicado:', e.target);
+            }}>
             <div className="col-span-7 mb-4">
               <h2 className="text-lg font-semibold text-grafite">ASSISTÊNCIA SOCIAL</h2>
               {/* <p className="text-sm text-red-600 mb-2">(Daqui pra baixo, a cargo da RM destino (Seç Sau Reg, mudando o nome))</p> */}
@@ -376,7 +572,7 @@ export default function FormularioMedicoParte2() {
                       type="radio" 
                       value="sim"
                       onChange={() => handleRadioChange('hotelReservado', 'sim')}
-                      checked={Boolean(watch('hotelReservado'))}
+                      checked={watch('hotelReservado') === true}
                       className="h-4 w-4 text-verde focus:ring-verde" 
                     />
                     <span>Sim</span>
@@ -386,7 +582,7 @@ export default function FormularioMedicoParte2() {
                       type="radio" 
                       value="nao"
                       onChange={() => handleRadioChange('hotelReservado', 'nao')}
-                      checked={!Boolean(watch('hotelReservado'))}
+                      checked={watch('hotelReservado') === false}
                       className="h-4 w-4 text-verde focus:ring-verde" 
                     />
                     <span>Não</span>
@@ -601,9 +797,36 @@ export default function FormularioMedicoParte2() {
                 Voltar
               </Button>
               <Button 
-                type="submit"
+                id="submitBtn"
+                type="button" 
                 disabled={isSubmitting}
                 className="bg-verde text-white hover:bg-verdeEscuro px-8 py-2"
+                onClick={() => {
+                  console.log('=== Botão Salvar e Enviar clicado ===');
+                  console.log('Estado do formulário:', watch());
+                  console.log('Erros no formulário:', errors);
+                  
+                  // Verificar se o formulário tem erros de validação antes de submeter
+                  if (Object.keys(errors).length > 0) {
+                    console.error('Formulário tem erros de validação:', errors);
+                    Swal.fire({
+                      title: 'Formulário inválido',
+                      text: 'Por favor, corrija os erros no formulário antes de enviar',
+                      icon: 'error',
+                      customClass: {
+                        confirmButton:
+                          'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+                      },
+                    });
+                    return;
+                  }
+                  
+                  // Submeter o formulário manualmente
+                  handleSubmit((data) => {
+                    console.log('Form submission triggered manually');
+                    onSubmit(data);
+                  })();
+                }}
               >
                 {isSubmitting ? (
                   <div className="flex items-center">

@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 
-import Layout from '@/components/layout/Layout';
 import Card from '@/components/common/card';
 import Input, { formatCurrency } from '@/components/common/input';
 import Button from '@/components/common/button';
