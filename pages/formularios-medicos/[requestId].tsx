@@ -39,6 +39,7 @@ type FormularioMedico = {
   horario4?: string;
   aprovacao?: boolean;
   createdAt: string;
+  updatedAt?: string;
 };
 
 export default function VisualizarFormulariosMedicos() {
@@ -122,24 +123,50 @@ export default function VisualizarFormulariosMedicos() {
   }
 
   return (
-    <Layout>
       <div className="flex flex-col gap-4 p-4">
         <h1 className="text-2xl font-bold text-grafite">Formulários Médicos da Solicitação</h1>
         
         {formularios.map((formulario, index) => {
-          const isParte2 = formulario.consultaExame.includes('RM_DESTINO') || 
-                           formulario.consultaExame.includes('Parte 2');
+          // Verificar se é Parte 2 baseado nos campos específicos da Parte 2 que estão preenchidos
+          // Um formulário é considerado Parte 2 se pelo menos um dos campos de traslado estiver preenchido
+          // ou se hotelReservado estiver definido
+          const temDadosParte2 = formulario.motorista1 || 
+                               formulario.motorista2 || 
+                               formulario.motorista3 || 
+                               formulario.motorista4 || 
+                               formulario.hotelReservado !== null;
+          
+          // Verificar também pelo método original
+          const isParte2PorConsulta = formulario.consultaExame.includes('RM_DESTINO') || 
+                                    formulario.consultaExame.includes('Parte 2');
+          
+          const isParte2 = temDadosParte2 || isParte2PorConsulta;
+
+          // Verificar se tem os dados básicos da Parte 1
+          const temDadosParte1 = formulario.profissionalCiente !== undefined || 
+                              formulario.materialDisponivel !== undefined || 
+                              formulario.pacienteNoMapa !== undefined || 
+                              formulario.setorEmCondicoes !== undefined ||
+                              formulario.leitoReservado !== undefined;
+          
+          // Um formulário pode ter ambas as partes
+          const mostrarParte1 = temDadosParte1;
+          const mostrarParte2 = temDadosParte2;
           
           return (
             <Card key={formulario.id} className="mb-6">
               <h2 className="text-xl font-semibold text-grafite mb-4">
-                {isParte2 ? 'Formulário RM Destino (Parte 2)' : 'Formulário OMS Destino (Parte 1)'}
+                {mostrarParte1 && mostrarParte2 
+                  ? 'Formulário Médico Completo (Partes 1 e 2)'
+                  : isParte2 ? 'Formulário RM Destino (Parte 2)' : 'Formulário OMS Destino (Parte 1)'}
               </h2>
               <p className="text-sm text-gray-500 mb-4">
                 Preenchido em: {formatarData(formulario.createdAt)}
+                {formulario.updatedAt && formulario.updatedAt !== formulario.createdAt ? 
+                  ` | Última atualização: ${formatarData(formulario.updatedAt)}` : ''}
               </p>
               
-              {!isParte2 ? (
+              {mostrarParte1 ? (
                 // Conteúdo da Parte 1
                 <>
                   <div className="border-b border-gray-200 pb-4 mb-4">
@@ -239,9 +266,15 @@ export default function VisualizarFormulariosMedicos() {
                     )}
                   </div>
                 </>
-              ) : (
-                // Conteúdo da Parte 2
+              ) : null}
+
+              {/* Sempre exibir a Parte 2 se tiver os dados relevantes, independente se é um formulário combinado ou não */}
+              {mostrarParte2 && (
                 <>
+                  {mostrarParte1 && (
+                    <div className="border-t border-gray-300 my-6"></div>
+                  )}
+                  
                   <div className="border-b border-gray-200 pb-4 mb-4">
                     <h3 className="font-semibold mb-2">Assistência Social</h3>
                     <div>
@@ -344,7 +377,6 @@ export default function VisualizarFormulariosMedicos() {
           </button>
         </div>
       </div>
-    </Layout>
   );
 }
 

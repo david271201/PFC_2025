@@ -31,15 +31,25 @@ export default async function handle(
   }
 
   if (req.method === 'GET') {
+    // Adicionar logs para depuração
+    console.log('=== API /api/requests/[requestId] ===');
+    console.log('requestId recebido:', requestId);
+    console.log('Tipo do requestId:', typeof requestId);
+    console.log('Usuário:', { userId, role, organizationId: dbUser.organizationId, regionId: dbUser.regionId });
+    
     if (!checkPermission(role, 'requests:read')) {
       return res.status(403).json({ message: 'Usuário não autorizado' });
     }
 
     const getFilters = () => {
       let responsesFilter: any = {};
-      let requestsFilter: any = {
-        senderId: dbUser.organizationId,
-      };
+      // TEMPORÁRIO: Remover o filtro de senderId para diagnóstico
+      // let requestsFilter: any = {
+      //   senderId: dbUser.organizationId,
+      // };
+      
+      // Usar um filtro vazio temporariamente para diagnóstico
+      let requestsFilter: any = {};
 
       if (dbUser.regionId) {
         if (dbUser.regionId !== 'dsau') {
@@ -47,19 +57,30 @@ export default async function handle(
             status: RequestStatus.APROVADO,
           };
         }
-        requestsFilter = {};
+        // requestsFilter = {}; // Já está vazio acima
       }
+      
+      console.log('*** IMPORTANTE: Filtros temporariamente removidos para diagnóstico ***');
 
       return { responsesFilter, requestsFilter };
     };
 
     const { responsesFilter, requestsFilter } = getFilters();
+    
+    // Log para mostrar os filtros que serão aplicados
+    console.log('Filtros que serão aplicados na consulta:');
+    console.log('responsesFilter:', responsesFilter);
+    console.log('requestsFilter:', requestsFilter);
+    
+    // Construir a cláusula where para melhor log
+    const whereClause = {
+      id: requestId as string,
+      ...requestsFilter,
+    };
+    console.log('Cláusula WHERE completa:', whereClause);
 
     const request = await prisma.request.findUnique({
-      where: {
-        id: requestId as string,
-        ...requestsFilter,
-      },
+      where: whereClause,
       include: {
         pacient: true,
         sender: {
@@ -119,8 +140,33 @@ export default async function handle(
     });
 
     if (!request) {
+      console.log('Solicitação não encontrada com o ID:', requestId);
+      
+      // Verificar se a solicitação existe sem os filtros adicionais
+      const checkRequest = await prisma.request.findUnique({
+        where: { id: requestId as string },
+        select: { id: true, status: true, senderId: true }
+      });
+      
+      console.log('Verificação direta sem filtros adicionais:', checkRequest);
+      
+      if (checkRequest) {
+        console.log('A solicitação existe, mas foi filtrada pelos critérios de permissão.');
+        console.log('Status da solicitação:', checkRequest.status);
+        console.log('SenderId da solicitação:', checkRequest.senderId);
+        console.log('OrganizationId do usuário:', dbUser.organizationId);
+      }
+      
       return res.status(404).json({ message: 'Solicitação não encontrada' });
     }
+    
+    // Se chegou aqui, a solicitação foi encontrada
+    console.log('Solicitação encontrada:', { 
+      id: request.id, 
+      status: request.status,
+      pacientCpf: request.pacientCpf,
+      senderId: request.senderId
+    });
 
     const requestedOrganizations = await prisma.organization.findMany({
       where: {

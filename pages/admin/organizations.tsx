@@ -4,11 +4,20 @@ import { useRouter } from 'next/router';
 import Layout from '../../src/components/layout/Layout';
 import { Role } from '@prisma/client';
 import { UserType } from '../../src/permissions/utils';
+import DefaultUsersModal from '@/components/admin/DefaultUsersModal';
 
 // Tipos
 interface Region {
   id: string;
   name: string;
+}
+
+// Tipos para as senhas dos usuários padrão
+interface UserPasswordInfo {
+  name: string;
+  role: Role;
+  email: string;
+  password: string;
 }
 
 interface Organization {
@@ -36,6 +45,11 @@ const OrganizationsPage = () => {
   });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Estado para o modal de usuários padrão
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [userPasswords, setUserPasswords] = useState<UserPasswordInfo[]>([]);
+  const [newOrgName, setNewOrgName] = useState('');
   
   // Estados para busca e filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -188,7 +202,17 @@ const OrganizationsPage = () => {
         throw new Error(errorData.message || 'Erro ao criar organização');
       }
 
-      // Limpar o formulário e atualizar a lista
+      // Obter resposta com dados da organização e senhas dos usuários
+      const result = await response.json();
+      
+      // Armazenar temporariamente as senhas dos usuários para exibir no modal
+      if (result.plainPasswords && result.plainPasswords.length > 0) {
+        setUserPasswords(result.plainPasswords);
+        setNewOrgName(result.organization.name);
+        setIsUserModalOpen(true);
+      }
+
+      // Limpar o formulário
       setNewOrganization({
         name: '',
         regionId: regions.length > 0 ? regions[0].id : '',
@@ -199,10 +223,12 @@ const OrganizationsPage = () => {
       // Atualizar a lista de organizações
       fetchOrganizations();
       
-      // Limpar a mensagem de sucesso após 3 segundos
-      setTimeout(() => {
-        setSuccessMessage(null);
-      }, 3000);
+      // Limpar a mensagem de sucesso após 3 segundos (mas apenas se o modal não estiver aberto)
+      if (!result.plainPasswords || result.plainPasswords.length === 0) {
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
+      }
     } catch (err: any) {
       setError(err.message || 'Erro ao criar organização');
       console.error(err);
@@ -306,6 +332,17 @@ const OrganizationsPage = () => {
   return (
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold mb-6">Gerenciamento de Organizações Militares</h1>
+        
+        {/* Modal de usuários padrão */}
+        <DefaultUsersModal 
+          isOpen={isUserModalOpen}
+          onClose={() => {
+            setIsUserModalOpen(false);
+            setSuccessMessage(null);
+          }}
+          userPasswords={userPasswords}
+          organizationName={newOrgName}
+        />
         
         {/* Alertas */}
         {error && (

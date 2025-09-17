@@ -5,10 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 
-import Layout from '@/components/layout/Layout';
 import Card from '@/components/common/card';
 import Button from '@/components/common/button';
-import Select from '@/components/common/select';
 import SpinLoading from '@/components/common/loading/SpinLoading';
 import { auth } from '../../auth';
 import { GetServerSidePropsContext } from 'next';
@@ -16,21 +14,35 @@ import { checkPermission, UserType } from '@/permissions/utils';
 
 // Schema para validação da segunda parte do formulário
 const formularioMedicoParte2Schema = z.object({
-  hotelReservado: z.string().transform((val) => val === "sim"),
-  justificativaHotel: z.string().optional(),
+  hotelReservado: z.union([
+    z.string().transform((val) => val === "sim"),
+    z.boolean(),
+    z.undefined().transform(() => false)
+  ]),
+  justificativaHotelReservado: z.string().optional(),
   
   // Campos de Traslado
   motorista1: z.string().optional(),
-  horario1: z.string().optional(),
+  // Validação do formato de horário (HH:MM)
+  horario1: z.string().optional().refine((val) => {
+    if (!val) return true;
+    return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(val);
+  }, { message: "Formato de horário inválido. Use o formato HH:MM" }),
   motorista2: z.string().optional(),
-  horario2: z.string().optional(),
+  horario2: z.string().optional().refine((val) => {
+    if (!val) return true;
+    return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(val);
+  }, { message: "Formato de horário inválido. Use o formato HH:MM" }),
   motorista3: z.string().optional(),
-  horario3: z.string().optional(),
+  horario3: z.string().optional().refine((val) => {
+    if (!val) return true;
+    return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(val);
+  }, { message: "Formato de horário inválido. Use o formato HH:MM" }),
   motorista4: z.string().optional(),
-  horario4: z.string().optional(),
-  
-  // Observações
-  observacoes: z.string().optional(),
+  horario4: z.string().optional().refine((val) => {
+    if (!val) return true;
+    return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(val);
+  }, { message: "Formato de horário inválido. Use o formato HH:MM" }),
   
   // Aprovação do checklist
   aprovacao: z.boolean().optional(),
@@ -51,81 +63,439 @@ type FormularioMedicoParte1Data = {
 export default function FormularioMedicoParte2() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { requestId } = router.query; // Captura o ID da solicitação da URL
+  const [isLoading, setIsLoading] = useState(false);
+  const { requestId, formularioId } = router.query; // Captura o ID da solicitação e do formulário da URL
 
   const {
     register,
     handleSubmit,
     setValue,
+    reset,
+    watch,
     formState: { errors }
   } = useForm<FormularioMedicoParte2Data>({
     resolver: zodResolver(formularioMedicoParte2Schema),
     defaultValues: {
       hotelReservado: false,
       aprovacao: false,
-    }
+    },
+    mode: 'onBlur', // Validar ao perder o foco
+    reValidateMode: 'onChange' // Revalidar ao mudar valores
   });
 
+  // Buscar dados da solicitação para preencher informações contextuais
+  useEffect(() => {
+    console.log('=== Página de cadastro médico - Parte 2 (INICIALIZAÇÃO) ===');
+    console.log('URL atual:', typeof window !== 'undefined' ? window.location.href : 'N/A');
+    console.log('URL search params:', typeof window !== 'undefined' ? window.location.search : 'N/A');
+    console.log('Router query params completos:', router.query);
+    console.log('Request ID recebido do router:', requestId);
+    console.log('Formulario ID recebido do router:', formularioId);
+    console.log('Tipo do requestId:', typeof requestId);
+    
+    // Verificar se o router está pronto
+    if (!router.isReady) {
+      console.log('Router ainda não está pronto, aguardando...');
+      return;
+    }
+    
+    // Tentar obter o ID diretamente da URL também
+    const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const requestIdFromUrl = urlParams.get('requestId');
+    const formularioIdFromUrl = urlParams.get('formularioId');
+    console.log('Request ID obtido diretamente da URL:', requestIdFromUrl);
+    console.log('Formulario ID obtido diretamente da URL:', formularioIdFromUrl);
+    
+    const fetchRequestData = async () => {
+      if (!requestId && !requestIdFromUrl) {
+        console.error('ID da solicitação não encontrado');
+        Swal.fire({
+          title: 'Erro',
+          text: 'ID da solicitação não encontrado',
+          icon: 'error',
+          customClass: {
+            confirmButton:
+              'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+          },
+        }).then(() => {
+          router.push('/solicitacoes');
+        });
+        return;
+      }
+      
+      setIsLoading(true);
+      
+      // Garantir que estamos usando o ID correto, com preferência para o da URL direta
+      const actualRequestId = requestIdFromUrl || (Array.isArray(requestId) ? requestId[0] : requestId);
+      console.log('ID de solicitação que será usado:', actualRequestId);
+      
+      try {
+        // Verificar se já existe um formulário preenchido para esta solicitação
+        const formularioResponse = await fetch(`/api/formularios-medicos/${actualRequestId}?parte=RM_DESTINO`);
+        
+        if (formularioResponse.ok) {
+          const formularioData = await formularioResponse.json();
+          
+          if (formularioData) {
+            console.log('Formulário já preenchido:', formularioData);
+            // Preencher o formulário com dados existentes
+            reset({
+              hotelReservado: formularioData.hotelReservado,
+              justificativaHotelReservado: formularioData.justificativaHotelReservado,
+              motorista1: formularioData.motorista1 || '',
+              horario1: formularioData.horario1 || '',
+              motorista2: formularioData.motorista2 || '',
+              horario2: formularioData.horario2 || '',
+              motorista3: formularioData.motorista3 || '',
+              horario3: formularioData.horario3 || '',
+              motorista4: formularioData.motorista4 || '',
+              horario4: formularioData.horario4 || '',
+              aprovacao: formularioData.aprovacao || false
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    // Debug da condição
+    console.log('Condição para buscar dados:', { 
+      requestId, 
+      formularioId, 
+      shouldFetch: requestId && (typeof requestId === 'string' || Array.isArray(requestId)),
+      routerIsReady: router.isReady
+    });
+    
+    // Obter o requestId correto, dando preferência para o valor da URL
+    const actualRequestId = requestIdFromUrl || 
+                          (Array.isArray(requestId) ? requestId[0] : requestId);
+    
+    console.log('ID de solicitação final para uso:', actualRequestId);
+    
+    // Buscar dados sempre que tivermos um ID de solicitação válido e o router estiver pronto
+    if (router.isReady && actualRequestId) {
+      console.log('Iniciando busca de dados com requestId:', actualRequestId);
+      fetchRequestData();
+    } else {
+      console.log('Não foi possível buscar dados: router não pronto ou requestId inválido');
+    }
+  }, [requestId, reset, router]);
+
+  // Buscar dados do formulário quando houver um formularioId
+  useEffect(() => {
+    const fetchFormulario = async () => {
+      if (!formularioId) return;
+      
+      setIsLoading(true);
+      
+      try {
+        // Buscar dados do formulário específico
+        const response = await fetch(`/api/formularios-medicos/formulario/${formularioId}`);
+        
+        if (!response.ok) {
+          throw new Error('Erro ao buscar dados do formulário');
+        }
+        
+        const data = await response.json();
+        
+        // Preencher o formulário com os dados obtidos
+        reset({
+          hotelReservado: data.hotelReservado,
+          justificativaHotelReservado: data.justificativaHotelReservado,
+          motorista1: data.motorista1 || '',
+          horario1: data.horario1 || '',
+          motorista2: data.motorista2 || '',
+          horario2: data.horario2 || '',
+          motorista3: data.motorista3 || '',
+          horario3: data.horario3 || '',
+          motorista4: data.motorista4 || '',
+          horario4: data.horario4 || '',
+          aprovacao: data.aprovacao || false
+        });
+      } catch (error) {
+        console.error('Erro ao buscar formulário:', error);
+        Swal.fire({
+          title: 'Erro',
+          text: error instanceof Error ? error.message : 'Erro ao buscar formulário',
+          icon: 'error',
+          customClass: {
+            confirmButton:
+              'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+          },
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    if (formularioId && typeof formularioId === 'string') {
+      fetchFormulario();
+    }
+  }, [formularioId, reset, router]);
+
   const handleRadioChange = (fieldName: keyof FormularioMedicoParte2Data, value: string) => {
-    setValue(fieldName, value === "sim");
+    // Definimos o valor como booleano diretamente, já que o schema foi atualizado para aceitar boolean
+    setValue(fieldName, value === "sim", { shouldValidate: true, shouldDirty: true });
+    console.log(`Campo ${fieldName} alterado para:`, value === "sim", '(valor original:', value, ')');
   };
 
   const onSubmit = async (data: FormularioMedicoParte2Data) => {
     setIsSubmitting(true);
+    console.log('=== Início do envio do formulário (Parte 2) ===');
+    console.log('Dados do formulário a serem enviados:', data);
+    console.log('hotelReservado:', data.hotelReservado, typeof data.hotelReservado);
+    console.log('URL atual no momento do submit:', typeof window !== 'undefined' ? window.location.href : 'N/A');
+    console.log('Query params no momento do submit:', router.query);
+    console.log('RequestId do router:', requestId);
+    console.log('FormularioId do router:', formularioId);
     
     try {
       if (!requestId) {
+        console.error('ID da solicitação não fornecido no momento do submit!');
         throw new Error('ID da solicitação não fornecido');
       }
       
+      // Obter o requestId correto (considerando que pode ser um array)
+      const requestIdStr = Array.isArray(requestId) ? requestId[0] : requestId as string;
+      console.log('RequestId normalizado para uso:', requestIdStr);
+      
+      // Buscar primeiro se já existe um formulário para este requestId
+      let existingFormId: string | undefined = undefined;
+      try {
+        console.log('Buscando formulário existente para o requestId:', requestIdStr);
+        const formularioExistenteResponse = await fetch(`/api/formularios-medicos/${requestIdStr}?parte=RM_DESTINO`);
+        
+        if (formularioExistenteResponse.ok) {
+          const formularioExistente = await formularioExistenteResponse.json();
+          console.log('Resposta da API de formulário existente:', formularioExistente);
+          
+          // Verificar se temos um array ou um objeto único
+          if (Array.isArray(formularioExistente) && formularioExistente.length > 0) {
+            // Usar o primeiro formulário da lista
+            existingFormId = formularioExistente[0].id;
+            console.log('Múltiplos formulários encontrados, usando o ID do primeiro:', existingFormId);
+          } else if (formularioExistente && formularioExistente.id) {
+            // Objeto único
+            existingFormId = formularioExistente.id;
+            console.log('Formulário existente encontrado:', existingFormId);
+          }
+        }
+      } catch (error) {
+        console.warn('Erro ao buscar formulário existente:', error);
+      }
+      
+      // Agora definimos que estamos sempre em modo de edição se encontramos um formulário
+      const isEditing = existingFormId !== undefined || (formularioId !== undefined && formularioId !== null);
+      console.log('Modo de edição:', isEditing ? 'Editando formulário existente' : 'Criando novo formulário');
+      console.log('Tipo do requestId:', typeof requestId, 'Valor:', requestId);
+      
+      // Buscar dados do paciente para preenchimento adequado
+      let pacientData = {
+        nomeBeneficiario: "Formulário Parte 2 - RM Destino",
+        precCpMatriculaCpf: "N/A",
+        idade: "N/A",
+        postoGraduacaoTitular: "N/A",
+        necessitaAcompanhante: false,
+        consultaExame: "N/A"
+      };
+      
+      // Tentar buscar dados reais do paciente da solicitação
+      try {
+        // Corrigindo para usar o endpoint correto para dados da solicitação
+        const requestResponse = await fetch(`/api/requests/${requestIdStr}`);
+        if (requestResponse.ok) {
+          const requestData = await requestResponse.json();
+          if (requestData.pacient) {
+            pacientData = {
+              nomeBeneficiario: requestData.pacient.name,
+              precCpMatriculaCpf: requestData.pacient.precCp || requestData.pacient.cpf,
+              idade: requestData.pacient.age || "N/A",
+              postoGraduacaoTitular: requestData.pacient.rank,
+              necessitaAcompanhante: requestData.needsCompanion || false,
+              consultaExame: requestData.description || "N/A",
+            };
+            console.log('Dados do paciente obtidos:', pacientData);
+          }
+        }
+      } catch (error) {
+        console.warn('Não foi possível obter dados do paciente:', error);
+        // Continua com os dados default mesmo se não conseguir buscar os dados reais
+      }
+      
+      // Preparar payload para API
+      // O requestIdStr já foi normalizado acima
+      console.log('RequestId que será enviado para API:', requestIdStr);
+      
+      // Determinar o ID a ser usado para atualização (prioridade: existingFormId > formularioId)
+      const formId = existingFormId || (Array.isArray(formularioId) ? formularioId[0] : formularioId as string);
+      console.log('ID do formulário que será usado para atualização:', formId);
+      
+      const payload = {
+        // ID para atualização - agora usamos o ID encontrado via requestId quando possível
+        id: formId,
+        
+        // Dados do beneficiário (obrigatórios na estrutura)
+        ...pacientData,
+        
+        // Campos da parte 2
+        justificativaHotelReservado: data.justificativaHotelReservado, // Campo já alinhado com a API
+        hotelReservado: data.hotelReservado,
+        motorista1: data.motorista1,
+        horario1: data.horario1,
+        motorista2: data.motorista2,
+        horario2: data.horario2,
+        motorista3: data.motorista3,
+        horario3: data.horario3,
+        motorista4: data.motorista4,
+        horario4: data.horario4,
+        // observacoes: data.observacoes,
+        aprovacao: data.aprovacao,
+        
+        // ID da solicitação e parte do formulário
+        requestId: requestIdStr,
+        parte: 'RM_DESTINO'
+      };
+      
+      console.log('Payload completo que será enviado à API:', payload);
+      
       // Enviar para a API de cadastro com o ID da solicitação
+      console.log('Enviando requisição para /api/formularios-medicos/cadastrar...');
+      console.log('Valor do hotelReservado sendo enviado:', payload.hotelReservado, typeof payload.hotelReservado);
       const formularioResponse = await fetch('/api/formularios-medicos/cadastrar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          // Dados do beneficiário (obrigatórios na estrutura)
-          nomeBeneficiario: "Formulário Parte 2 - RM Destino",
-          precCpMatriculaCpf: "N/A",
-          idade: "N/A",
-          postoGraduacaoTitular: "N/A",
-          necessitaAcompanhante: false,
-          consultaExame: "N/A",
-          
-          // Campos da parte 2
-          ...data,
-          
-          // ID da solicitação e parte do formulário
-          requestId: requestId as string,
-          parte: 'RM_DESTINO'
-        }),
+        credentials: 'include', // Incluir credenciais (cookies) na requisição
+        body: JSON.stringify(payload),
       });
 
+      console.log('Status da resposta da API:', formularioResponse.status);
+      
+      // Capturar o texto da resposta primeiro para debug
+      const responseText = await formularioResponse.text();
+      console.log('Resposta da API (texto bruto):', responseText);
+      
+      // Tentar analisar como JSON (apenas se houver conteúdo)
+      let responseData;
+      try {
+        if (responseText) {
+          responseData = JSON.parse(responseText);
+        }
+      } catch (parseError) {
+        console.error('Erro ao analisar resposta JSON:', parseError);
+        console.log('Texto da resposta que causou erro:', responseText);
+      }
+      
       if (!formularioResponse.ok) {
-        const error = await formularioResponse.json();
-        throw new Error(error.message || 'Erro ao enviar formulário médico');
+        console.error('Erro na resposta da API de cadastro:', responseData || responseText);
+        throw new Error((responseData && responseData.message) || 'Erro ao enviar formulário médico');
       }
       
-      const formularioData = await formularioResponse.json();
+      const formularioData = responseData || {};
+      console.log('Formulário foi salvo com sucesso, agora vamos usar o novo endpoint único para processamento');
       
-      // Atualizar o fluxo da solicitação através da API de avaliação
-      const avaliacaoResponse = await fetch('/api/avaliacoes/chefe-secao-regional', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          requestId: requestId,
-          formularioId: formularioData.id
-        }),
-      });
+      // Modificando para usar o novo endpoint combinado que processa o formulário e atualiza o status
+      console.log('Preparando dados para o endpoint combinado...');
       
-      if (!avaliacaoResponse.ok) {
-        const error = await avaliacaoResponse.json();
-        throw new Error(error.message || 'Erro ao atualizar status da solicitação');
+      // Enviamos o payload completo diretamente para o novo endpoint
+      console.log('Enviando para endpoint unificado com formularioId:', formularioData.id);
+      
+      try {
+        console.log('Chamando o novo endpoint unificado /api/formularios-medicos/processar-chefe-secao-regional');
+        
+        // Reusamos o payload original, apenas atualizamos o ID do formulário que acabou de ser salvo
+        const processoPayload = {
+          ...payload,  // Reutilizar o payload original do formulário
+          id: formularioData.id  // Usar o ID retornado pelo save do formulário
+        };
+        
+        console.log('Payload para o endpoint unificado:', JSON.stringify(processoPayload, null, 2));
+        
+        const processoResponse = await fetch('/api/formularios-medicos/processar-chefe-secao-regional', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify(processoPayload)
+        });
+        
+        console.log('Status da resposta do endpoint unificado:', processoResponse.status);
+        
+        const processoResponseText = await processoResponse.text();
+        console.log('Resposta do endpoint unificado (texto):', processoResponseText);
+        
+        let processoData;
+        try {
+          if (processoResponseText) {
+            processoData = JSON.parse(processoResponseText);
+            console.log('Resposta do endpoint unificado (JSON):', processoData);
+          }
+        } catch (parseError) {
+          console.error('Erro ao analisar JSON da resposta:', parseError);
+        }
+        
+        if (!processoResponse.ok) {
+          console.error('Erro no processamento unificado:', processoData || processoResponseText);
+          
+          // Mostramos uma mensagem especial ao usuário
+          Swal.fire({
+            title: 'Formulário Salvo Parcialmente',
+            text: 'O formulário foi salvo, mas houve um erro ao processar a solicitação. Um administrador precisará verificar.',
+            icon: 'warning',
+            customClass: {
+              confirmButton:
+                'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+            },
+          }).then(() => {
+            router.push('/solicitacoes');
+          });
+          
+          return; // Saímos sem lançar erro, pois o formulário já foi salvo
+        }
+        
+        // Se chegou aqui, tudo deu certo!
+        // Exibir mensagem de sucesso completo
+        Swal.fire({
+          title: 'Sucesso',
+          text: data.aprovacao 
+            ? 'Formulário médico enviado e solicitação aprovada com sucesso'
+            : 'Formulário médico enviado e solicitação reprovada com sucesso',
+          icon: 'success',
+          customClass: {
+            confirmButton:
+              'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+          },
+        }).then(() => {
+          router.push('/solicitacoes');
+        });
+        
+        return; // Encerrar processamento com sucesso
+      } catch (error) {
+        console.error('Falha ao chamar API de avaliação:', error);
+        // Se chegamos aqui, o formulário já foi salvo mas a avaliação falhou
+        // Mostramos uma mensagem ao usuário de qualquer forma
+        Swal.fire({
+          title: 'Formulário Salvo',
+          text: 'O formulário foi salvo com sucesso, mas houve um erro ao atualizar o status da solicitação.',
+          icon: 'warning',
+          customClass: {
+            confirmButton:
+              'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+          },
+        }).then(() => {
+          router.push('/solicitacoes');
+        });
+        
+        return; // Saímos sem lançar erro, pois o formulário já foi salvo
       }
-
+      
+      // Esta linha está agora movida para dentro do bloco try acima
+      // Formulário foi salvo com sucesso, e se chegarmos aqui a avaliação também foi bem-sucedida
       Swal.fire({
         title: 'Sucesso',
         text: 'Formulário médico enviado com sucesso e avaliação concluída',
@@ -138,6 +508,16 @@ export default function FormularioMedicoParte2() {
         router.push('/solicitacoes');
       });
     } catch (error) {
+      console.error('=== ERRO AO PROCESSAR FORMULÁRIO ===');
+      console.error('Detalhes do erro:', error);
+      if (error instanceof Error) {
+        console.error('Mensagem do erro:', error.message);
+        console.error('Stack trace:', error.stack);
+      }
+      console.error('Dados que estavam sendo enviados:', data);
+      console.error('RequestId no momento do erro:', requestId);
+      console.error('FormularioId no momento do erro:', formularioId);
+      
       Swal.fire({
         title: 'Erro',
         text: error instanceof Error ? error.message : 'Erro ao enviar formulário médico',
@@ -148,16 +528,28 @@ export default function FormularioMedicoParte2() {
         },
       });
     } finally {
+      console.log('=== Fim do processamento do formulário ===');
+      console.log('Status final:', isSubmitting ? 'Ainda processando' : 'Processamento finalizado');
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Layout>
       <div className="flex flex-col gap-4 p-4">
         <h1 className="text-2xl font-bold text-grafite">Formulário de Atendimento Médico - RM Destino (Seç Sau Reg)</h1>
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <SpinLoading />
+            <p className="ml-2 text-grafite">Carregando dados do formulário...</p>
+          </div>
+        ) : (
         <Card>
-          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-7 gap-4">
+          <form 
+            onSubmit={handleSubmit(onSubmit)} 
+            className="grid grid-cols-7 gap-4"
+            onClick={(e) => {
+              console.log('Elemento clicado:', e.target);
+            }}>
             <div className="col-span-7 mb-4">
               <h2 className="text-lg font-semibold text-grafite">ASSISTÊNCIA SOCIAL</h2>
               {/* <p className="text-sm text-red-600 mb-2">(Daqui pra baixo, a cargo da RM destino (Seç Sau Reg, mudando o nome))</p> */}
@@ -168,7 +560,8 @@ export default function FormularioMedicoParte2() {
                     <input 
                       type="radio" 
                       value="sim"
-                      {...register('hotelReservado')}
+                      onChange={() => handleRadioChange('hotelReservado', 'sim')}
+                      checked={watch('hotelReservado') === true}
                       className="h-4 w-4 text-verde focus:ring-verde" 
                     />
                     <span>Sim</span>
@@ -177,7 +570,8 @@ export default function FormularioMedicoParte2() {
                     <input 
                       type="radio" 
                       value="nao"
-                      {...register('hotelReservado')}
+                      onChange={() => handleRadioChange('hotelReservado', 'nao')}
+                      checked={watch('hotelReservado') === false}
                       className="h-4 w-4 text-verde focus:ring-verde" 
                     />
                     <span>Não</span>
@@ -190,7 +584,7 @@ export default function FormularioMedicoParte2() {
                   <textarea
                     className="w-full rounded-md border border-cinzaClaro px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none"
                     rows={2}
-                    {...register('justificativaHotel')}
+                    {...register('justificativaHotelReservado')}
                   />
                 </div>
                 <div className="mt-2 text-right">
@@ -223,13 +617,17 @@ export default function FormularioMedicoParte2() {
                     </div>
                     <div className="w-full md:w-[48%]">
                       <label className="mb-1 block text-sm font-medium text-grafite">
-                        Horário:
+                        Horário: (formato HH:MM)
                       </label>
                       <input
-                        type="text"
-                        className="w-full rounded-md border border-cinzaClaro px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none"
+                        type="time"
+                        className={`w-full rounded-md border ${errors.horario1 ? 'border-red-500' : 'border-cinzaClaro'} px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none`}
                         {...register('horario1')}
+                        placeholder="HH:MM"
                       />
+                      {errors.horario1 && (
+                        <p className="text-red-500 text-xs mt-1">{errors.horario1.message}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -251,13 +649,17 @@ export default function FormularioMedicoParte2() {
                     </div>
                     <div className="w-full md:w-[48%]">
                       <label className="mb-1 block text-sm font-medium text-grafite">
-                        Horário:
+                        Horário: (formato HH:MM)
                       </label>
                       <input
-                        type="text"
-                        className="w-full rounded-md border border-cinzaClaro px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none"
+                        type="time"
+                        className={`w-full rounded-md border ${errors.horario2 ? 'border-red-500' : 'border-cinzaClaro'} px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none`}
                         {...register('horario2')}
+                        placeholder="HH:MM"
                       />
+                      {errors.horario2 && (
+                        <p className="text-red-500 text-xs mt-1">{errors.horario2.message}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -279,13 +681,17 @@ export default function FormularioMedicoParte2() {
                     </div>
                     <div className="w-full md:w-[48%]">
                       <label className="mb-1 block text-sm font-medium text-grafite">
-                        Horário:
+                        Horário: (formato HH:MM)
                       </label>
                       <input
-                        type="text"
-                        className="w-full rounded-md border border-cinzaClaro px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none"
+                        type="time"
+                        className={`w-full rounded-md border ${errors.horario3 ? 'border-red-500' : 'border-cinzaClaro'} px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none`}
                         {...register('horario3')}
+                        placeholder="HH:MM"
                       />
+                      {errors.horario3 && (
+                        <p className="text-red-500 text-xs mt-1">{errors.horario3.message}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -307,13 +713,17 @@ export default function FormularioMedicoParte2() {
                     </div>
                     <div className="w-full md:w-[48%]">
                       <label className="mb-1 block text-sm font-medium text-grafite">
-                        Horário:
+                        Horário: (formato HH:MM)
                       </label>
                       <input
-                        type="text"
-                        className="w-full rounded-md border border-cinzaClaro px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none"
+                        type="time"
+                        className={`w-full rounded-md border ${errors.horario4 ? 'border-red-500' : 'border-cinzaClaro'} px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none`}
                         {...register('horario4')}
+                        placeholder="HH:MM"
                       />
+                      {errors.horario4 && (
+                        <p className="text-red-500 text-xs mt-1">{errors.horario4.message}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -330,6 +740,19 @@ export default function FormularioMedicoParte2() {
                 <ol className="list-decimal ml-5 mb-4">
                   <li className="mb-2">Caso haja necessidade de deslocamentos adicionais, o serviço social organizará o cronograma, conforme a escala dos motoristas da UAL de destino.</li>
                 </ol>
+                
+                {/* Observações field removed because it doesn't exist in the database model */}
+                <div className="mt-4">
+                  <label className="mb-1 block text-sm font-medium text-grafite">
+                    Observações adicionais:
+                  </label>
+                  <textarea
+                    rows={4}
+                    className="w-full rounded-md border border-cinzaClaro px-3 py-2 text-sm text-grafite focus:border-verdeEscuro focus:outline-none"
+                    disabled
+                    placeholder="Campo não disponível neste formulário"
+                  ></textarea>
+                </div>
               </div>
               
               {/* Aprovação do checklist */}
@@ -355,31 +778,60 @@ export default function FormularioMedicoParte2() {
               </div>
             </div>
             
-            <div className="col-span-7 mt-4 flex justify-between">
+            <div className="col-span-7 mt-8 flex justify-between">
               <Button
                 type="button"
-                className="bg-cinzaClaro text-grafite hover:bg-gray-300"
+                className="bg-cinzaClaro text-grafite hover:bg-gray-300 px-8 py-2"
                 onClick={() => router.back()}
               >
                 Voltar
               </Button>
-              <div>
-                <Button
-                  type="button"
-                  className="mr-2 bg-cinzaClaro text-grafite hover:bg-gray-300"
-                  onClick={() => router.push('/solicitacoes')}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" isLoading={isSubmitting}>
-                  Cadastrar
-                </Button>
-              </div>
+              <Button 
+                id="submitBtn"
+                type="button" 
+                disabled={isSubmitting}
+                className="bg-verde text-white hover:bg-verdeEscuro px-8 py-2"
+                onClick={() => {
+                  console.log('=== Botão Salvar e Enviar clicado ===');
+                  console.log('Estado do formulário:', watch());
+                  console.log('Erros no formulário:', errors);
+                  
+                  // Verificar se o formulário tem erros de validação antes de submeter
+                  if (Object.keys(errors).length > 0) {
+                    console.error('Formulário tem erros de validação:', errors);
+                    Swal.fire({
+                      title: 'Formulário inválido',
+                      text: 'Por favor, corrija os erros no formulário antes de enviar',
+                      icon: 'error',
+                      customClass: {
+                        confirmButton:
+                          'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+                      },
+                    });
+                    return;
+                  }
+                  
+                  // Submeter o formulário manualmente
+                  handleSubmit((data) => {
+                    console.log('Form submission triggered manually');
+                    onSubmit(data);
+                  })();
+                }}
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center">
+                    <SpinLoading />
+                    <span className="ml-2">Salvando...</span>
+                  </div>
+                ) : (
+                  'Salvar e Enviar'
+                )}
+              </Button>
             </div>
           </form>
         </Card>
+        )}
       </div>
-    </Layout>
   );
 }
 

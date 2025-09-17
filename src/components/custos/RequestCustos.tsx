@@ -99,6 +99,44 @@ export default function CustosForm({ requestId, userRole, isEditable, onCustoAdd
       [name]: name === 'valor' ? parseFloat(value) : value,
     });
   };
+  
+  const handleDelete = async (custoId: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir este custo?')) {
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(`/api/requests/${requestId}/custos`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ custoId }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao excluir custo');
+      }
+      
+      // Recarregar custos após exclusão
+      const updatedCustos = await fetch(`/api/requests/${requestId}/custos`);
+      const updatedData = await updatedCustos.json();
+      setCustos(updatedData);
+      
+      // Notificar o componente pai que houve alteração
+      if (onCustoAdded) {
+        onCustoAdded();
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Erro ao excluir custo');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -182,6 +220,9 @@ export default function CustosForm({ requestId, userRole, isEditable, onCustoAdd
                 <th className="py-2 px-4 border-b text-right">Valor</th>
                 <th className="py-2 px-4 border-b text-left">Adicionado por</th>
                 <th className="py-2 px-4 border-b text-left">Data</th>
+                {isEditable && userRole === Role.OPERADOR_FUSEX && (
+                  <th className="py-2 px-4 border-b text-center">Ações</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -193,12 +234,26 @@ export default function CustosForm({ requestId, userRole, isEditable, onCustoAdd
                   <td className="py-2 px-4 border-b">
                     {new Date(custo.createdAt).toLocaleDateString('pt-BR')}
                   </td>
+                  {isEditable && userRole === Role.OPERADOR_FUSEX && (
+                    <td className="py-2 px-4 border-b text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(custo.id)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Excluir este custo"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
               <tr className="font-bold bg-gray-50">
                 <td className="py-2 px-4 border-t">Total</td>
                 <td className="py-2 px-4 border-t text-right">{formatCurrency(valorTotal)}</td>
-                <td colSpan={2} className="border-t"></td>
+                <td colSpan={isEditable && userRole === Role.OPERADOR_FUSEX ? 3 : 2} className="border-t"></td>
               </tr>
             </tbody>
           </table>

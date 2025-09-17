@@ -32,6 +32,11 @@ export default async function handle(
       return res.status(403).json({ message: 'Usuário não autorizado' });
     }
 
+    // Log para depuração da API
+    console.log('=== API /api/responses/[requestResponseId] ===');
+    console.log('requestResponseId recebido:', requestResponseId);
+    console.log('Tipo do requestResponseId:', typeof requestResponseId);
+    
     const requestResponse = await prisma.requestResponse.findUnique({
       where: {
         id: requestResponseId as string,
@@ -56,6 +61,19 @@ export default async function handle(
         .status(404)
         .json({ message: 'Resposta à solicitação não encontrada' });
     }
+
+    // Log detalhado dos dados encontrados
+    console.log('requestResponse encontrado:', {
+      id: requestResponse.id,
+      requestId: requestResponse.requestId,
+      receiverId: requestResponse.receiverId,
+      status: requestResponse.status
+    });
+    console.log('Dados do request vinculado:', {
+      id: requestResponse.request.id,
+      pacientCpf: requestResponse.request.pacientCpf,
+      status: requestResponse.request.status
+    });
 
     const actions = await prisma.actionLog.findMany({
       where: {

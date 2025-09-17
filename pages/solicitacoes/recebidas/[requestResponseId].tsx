@@ -22,6 +22,8 @@ import modal from '@/components/common/modal';
 import Swal from 'sweetalert2';
 import { TRequestResponseWithRequestInfo } from '@/common-types';
 import { isStatusForRole } from '@/utils';
+import FormularioActionButton from '@/components/requests/FormularioActionButton';
+import FormularioViewLink from '@/components/requests/FormularioViewLink';
 import {
   ArrowUpTrayIcon,
   DocumentIcon,
@@ -136,6 +138,38 @@ export default function RequestPage({ role }: { role: Role }) {
         Solicitação {requestResponse?.requestId}
       </h1>
       <div className="flex flex-col gap-4 px-2">
+        {/* Botão para preencher formulário médico (aparece apenas para Chefe da Divisão de Medicina) */}
+        {requestResponse?.requestId && (
+          <div className="action-button-container">
+            {/* Adicionando logs detalhados para depuração */}
+            {(() => {
+              console.log('=== Página de solicitações recebidas ===');
+              console.log('URL atual:', typeof window !== 'undefined' ? window.location.href : 'N/A');
+              console.log('requestResponseId do router:', router.query.requestResponseId);
+              console.log('Dados completos do requestResponse:', requestResponse);
+              console.log('ID da solicitação (requestId):', requestResponse.requestId);
+              console.log('ID da resposta à solicitação (id):', requestResponse.id);
+              console.log('Status da solicitação:', requestResponse?.request?.status);
+              
+              // Verificar se os IDs coincidem com os da URL
+              const urlPathParts = typeof window !== 'undefined' 
+                ? window.location.pathname.split('/')
+                : [];
+              const idFromUrl = urlPathParts[urlPathParts.length - 1];
+              console.log('ID extraído da URL:', idFromUrl);
+              console.log('requestResponse.id === idFromUrl:', requestResponse.id === idFromUrl);
+              console.log('requestId da página:', requestResponse.requestId);
+              return null;
+            })()}
+            
+            <FormularioActionButton
+              requestId={requestResponse.requestId}
+              userRole={role}
+              requestStatus={requestResponse?.request?.status || ''}
+            />
+          </div>
+        )}
+        
         <Accordion.Root startOpen>
           <Accordion.Header>
             <h2 className="text-xl font-bold text-grafite">

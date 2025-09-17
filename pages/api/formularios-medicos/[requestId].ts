@@ -49,7 +49,6 @@ export default async function handler(
       });
     }
   } else {
-    // Método não permitido
     res.setHeader('Allow', ['GET']);
     res.status(405).json({ message: `Método ${req.method} não permitido` });
   }

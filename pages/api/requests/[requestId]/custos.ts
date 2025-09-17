@@ -92,9 +92,40 @@ export default async function handler(
       console.error('Erro ao criar custo:', error);
       return res.status(500).json({ message: 'Erro ao criar custo' });
     }
+  } else if (req.method === 'DELETE') {
+    try {
+      const { custoId } = req.body;
+      
+      // Verificar se o ID do custo foi fornecido
+      if (!custoId) {
+        return res.status(400).json({ message: 'ID do custo é obrigatório' });
+      }
+      
+      // Verificar se o custo existe e pertence a esta solicitação
+      const custo = await prisma.custo.findFirst({
+        where: { 
+          id: custoId,
+          requestId: requestId
+        }
+      });
+      
+      if (!custo) {
+        return res.status(404).json({ message: 'Custo não encontrado' });
+      }
+      
+      // Excluir o custo
+      await prisma.custo.delete({
+        where: { id: custoId }
+      });
+      
+      return res.status(200).json({ message: 'Custo excluído com sucesso' });
+    } catch (error) {
+      console.error('Erro ao excluir custo:', error);
+      return res.status(500).json({ message: 'Erro ao excluir custo' });
+    }
   } else {
     // Método não permitido
-    res.setHeader('Allow', ['GET', 'POST']);
+    res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
     res.status(405).json({ message: `Método ${req.method} não permitido` });
   }
 }
