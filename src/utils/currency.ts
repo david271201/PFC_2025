@@ -9,8 +9,9 @@
  * @returns String formatada em reais (R$)
  */
 export function formatCurrency(value: number, inCents: boolean = false): string {
-  // Se o valor está em centavos, converte para reais
-  const realValue = inCents ? value / 100 : value;
+  // Não precisamos mais converter de centavos para reais
+  // Mantemos o parâmetro inCents para compatibilidade com código existente
+  const realValue = value;
   
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -21,21 +22,15 @@ export function formatCurrency(value: number, inCents: boolean = false): string 
 }
 
 /**
- * Converte um valor monetário para centavos (para armazenamento no banco)
- * @param value Valor em formato decimal (ex: 10.99)
- * @returns Valor em centavos (inteiro)
+ * Estas funções foram mantidas para compatibilidade com código existente,
+ * mas não realizam mais conversões agora que estamos armazenando valores decimais diretamente.
  */
 export function toCents(value: number): number {
-  return Math.round(value * 100);
+  return value; // Não convertemos mais para centavos
 }
 
-/**
- * Converte um valor em centavos para reais (para exibição na interface)
- * @param cents Valor em centavos
- * @returns Valor em reais (decimal)
- */
 export function toReais(cents: number): number {
-  return cents / 100;
+  return cents; // Não convertemos mais de centavos para reais
 }
 
 /**

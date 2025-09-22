@@ -20,8 +20,8 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
   placeholder = '0,00',
   inCents = false,
 }) => {
-  // Converte valor de centavos para reais se necessário
-  const realValue = inCents ? value / 100 : value;
+  // Não precisamos mais converter de centavos para reais, pois estamos usando valores decimais diretamente
+  const realValue = value;
   
   // Mantém o valor de exibição como string para facilitar a edição
   const [displayValue, setDisplayValue] = useState<string>(
@@ -30,9 +30,8 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
 
   // Atualiza o valor de exibição quando o valor da prop mudar (efeito externo)
   React.useEffect(() => {
-    const valueToDisplay = inCents ? value / 100 : value;
-    setDisplayValue(valueToDisplay === 0 ? '' : valueToDisplay.toString().replace('.', ','));
-  }, [value, inCents]);
+    setDisplayValue(value === 0 ? '' : value.toString().replace('.', ','));
+  }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -52,8 +51,8 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
     // Converte para número decimal
     const numericValue = parseStringToNumber(formattedValue);
     
-    // Se o valor deve ser armazenado em centavos, multiplica por 100
-    onChange(inCents ? Math.round(numericValue * 100) : numericValue);
+    // Não precisamos mais multiplicar por 100, pois estamos armazenando valores decimais diretamente
+    onChange(numericValue);
   };
 
   return (

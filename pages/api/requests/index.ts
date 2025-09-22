@@ -313,8 +313,8 @@ export default async function handle(
         data: {
           needsCompanion,
           cbhpmCode,
-          opmeCost: parseInt(opmeCost, 10),
-          psaCost: parseInt(psaCost, 10),
+          opmeCost: parseFloat(opmeCost) || 0, // Parse as float for decimal values
+          psaCost: parseFloat(psaCost) || 0, // Parse as float for decimal values
           requestedOrganizationIds,
           pacient: {
             connect: {

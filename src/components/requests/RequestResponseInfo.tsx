@@ -12,7 +12,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { useState } from 'react';
 import Button from '../common/button';
-import Input, { formatCurrency } from '../common/input';
+import Input from '../common/input';
+import CurrencyInput from '../common/input/CurrencyInput';
 import modal from '../common/modal';
 
 const responseFormSchema = z.object({
@@ -53,11 +54,6 @@ export default function RequestResponseInfo({
 
   const handleRemoveFile = (file: File) => {
     setSelectedFiles(selectedFiles.filter((f) => f.name !== file.name));
-  };
-
-  const handleCurrencyChange = (value: string, fieldOnChange: any) => {
-    const intValue = parseInt(value.replace(/\D/g, ''), 10);
-    fieldOnChange(intValue);
   };
 
   const onSubmit = async (data: ResponseFormDataType) => {
@@ -112,13 +108,10 @@ export default function RequestResponseInfo({
           rules={{ required: true }}
           defaultValue={0}
           render={({ field }) => (
-            <Input
+            <CurrencyInput
               label="Custo do procedimento"
-              type="text"
-              value={formatCurrency(field.value)}
-              onChange={(e) =>
-                handleCurrencyChange(e.target.value, field.onChange)
-              }
+              value={field.value || 0}
+              onChange={field.onChange}
               disabled={!!requestResponse}
             />
           )}
@@ -130,13 +123,10 @@ export default function RequestResponseInfo({
         rules={{ required: true }}
         defaultValue={0}
         render={({ field }) => (
-          <Input
+          <CurrencyInput
             label="Custo de OPME"
-            type="text"
-            value={formatCurrency(field.value)}
-            onChange={(e) =>
-              handleCurrencyChange(e.target.value, field.onChange)
-            }
+            value={field.value || 0}
+            onChange={field.onChange}
             disabled={!!requestResponse}
           />
         )}
@@ -148,13 +138,10 @@ export default function RequestResponseInfo({
           rules={{ required: true }}
           defaultValue={0}
           render={({ field }) => (
-            <Input
+            <CurrencyInput
               label="Custo passagem"
-              type="text"
-              value={formatCurrency(field.value || 0)}
-              onChange={(e) =>
-                handleCurrencyChange(e.target.value, field.onChange)
-              }
+              value={field.value || 0}
+              onChange={field.onChange}
               disabled={!!requestResponse}
             />
           )}
@@ -163,10 +150,13 @@ export default function RequestResponseInfo({
       {typeof requestResponse?.procedureCost === 'number' &&
         typeof requestResponse?.opmeCost === 'number' && (
           <Input
-            value={formatCurrency(
+            value={new Intl.NumberFormat('pt-BR', {
+              style: 'currency',
+              currency: 'BRL',
+            }).format(
               requestResponse.procedureCost +
                 requestResponse.opmeCost +
-                (requestResponse?.ticketCost || 0),
+                (requestResponse?.ticketCost || 0)
             )}
             label="Custo total"
             divClassname="col-span-4 row-start-2"

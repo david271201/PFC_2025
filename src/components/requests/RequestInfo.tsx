@@ -380,7 +380,7 @@ const normalizeString = (text: string) =>
             value={field.value || 0}
             onChange={field.onChange}
             disabled={isInputDisabled}
-            inCents={true} // Indica que o valor é armazenado em centavos
+            // Não usamos mais inCents pois armazenamos valores decimais diretamente
           />
         )}
       />
@@ -396,7 +396,7 @@ const normalizeString = (text: string) =>
             value={field.value || 0}
             onChange={field.onChange}
             disabled={isInputDisabled}
-            inCents={true} // Indica que o valor é armazenado em centavos
+            // Não usamos mais inCents pois armazenamos valores decimais diretamente
           />
         )}
       />
@@ -405,7 +405,7 @@ const normalizeString = (text: string) =>
         <div className="p-4 border rounded-md shadow-sm bg-white">
           <span className="font-semibold text-grafite">Custo Total</span>
           <p className="text-lg font-bold text-verde">
-            {formatCurrency(totalCost, true)}
+            {formatCurrency(totalCost)}
           </p>
         </div>
       </div>

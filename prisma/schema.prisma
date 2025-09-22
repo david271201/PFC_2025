@@ -152,8 +152,8 @@ model Request {
   status                   RequestStatus     @default(AGUARDANDO_CHEFE_FUSEX_1)
   cbhpmCode                String
   needsCompanion           Boolean
-  opmeCost                 Int
-  psaCost                  Int?
+  opmeCost                 Float
+  psaCost                  Float?
   createdAt                DateTime          @default(now())
   updatedAt                DateTime          @updatedAt
   actions                  ActionLog[]
@@ -169,9 +169,9 @@ model RequestResponse {
   receiver      Organization  @relation(fields: [receiverId], references: [id], onDelete: Cascade)
   receiverId    String
   status        RequestStatus @default(AGUARDANDO_HOMOLOGADOR_SOLICITADA_1)
-  opmeCost      Int?
-  procedureCost Int?
-  ticketCost    Int?
+  opmeCost      Float?
+  procedureCost Float?
+  ticketCost    Float?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   actions       ActionLog[]

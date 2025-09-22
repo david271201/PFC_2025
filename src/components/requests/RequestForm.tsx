@@ -113,8 +113,13 @@ export default function RequestForm({
   };
 
   const handleCurrencyChange = (value: string, fieldOnChange: any) => {
-    const intValue = parseInt(value.replace(/\D/g, ""), 10);
-    fieldOnChange(intValue);
+    // Remove currency symbol (R$) and thousand separators (.)
+    const cleanValue = value.replace(/R\$|\./g, '');
+    // Replace comma with dot for decimal
+    const normalizedValue = cleanValue.replace(',', '.');
+    // Parse as float to preserve decimal places
+    const floatValue = parseFloat(normalizedValue) || 0;
+    fieldOnChange(floatValue);
   };
 
   const submitForm = async (

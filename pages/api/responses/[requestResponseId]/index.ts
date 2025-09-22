@@ -139,8 +139,8 @@ export default async function handle(
           receiverId: dbUser?.organizationId || '',
         },
         data: {
-          opmeCost: parseInt(opmeCost, 10),
-          procedureCost: parseInt(procedureCost, 10),
+          opmeCost: parseFloat(opmeCost) || 0, // Parse as float for decimal values
+          procedureCost: parseFloat(procedureCost) || 0, // Parse as float for decimal values
           status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_3,
         },
       });
