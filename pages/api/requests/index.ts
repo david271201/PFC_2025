@@ -81,6 +81,22 @@ export default async function handle(
           }] : [])
         ]
       };
+    } else if (filter === 'received') {
+      // Para solicitações recebidas, mostrar aquelas onde a organização do usuário
+      // é a receptora selecionada e o status requer ação do papel atual do usuário
+      whereClause = {
+        requestResponses: {
+          some: {
+            receiverId: dbUser.organizationId,
+            selected: true
+          }
+        },
+        status: {
+          in: Object.entries(statusTransitions)
+                .filter(([_, transition]) => transition?.requiredRole === role)
+                .map(([status]) => status as RequestStatus)
+        }
+      };
     } else {
       // Tratamento especial para CHEFE_DIV_MEDICINA_4
       if (role === 'CHEFE_DIV_MEDICINA' && dbUser.organizationId) {
