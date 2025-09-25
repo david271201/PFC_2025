@@ -60,6 +60,26 @@ export default function RequestPage({ role }: { role: Role }) {
           </h2>
         )}
         {/* Botão para preencher formulário médico (aparece apenas para Chefe da Divisão de Medicina ou Chefe da Seção Regional) */}
+        {(() => {
+          console.log("🔍 [requestId].tsx - Dados para FormularioActionButton:", {
+            requestId: requestId as string,
+            role,
+            requestStatus: request?.status || '',
+            shouldRender: !!requestId,
+            requestData: request ? {
+              id: request.id,
+              status: request.status,
+              senderId: request.senderId,
+              requestResponses: request.requestResponses?.map(r => ({
+                id: r.id,
+                selected: r.selected,
+                receiverId: r.receiverId,
+                status: r.status
+              }))
+            } : null
+          });
+          return null;
+        })()}
         {requestId && (
           <FormularioActionButton
             requestId={requestId as string}

@@ -29,6 +29,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useState } from 'react';
 import ActionsTable from '@/components/actions/ActionsTable';
+import FormularioActionButton from '@/components/requests/FormularioActionButton';
 
 const opinionFormSchema = z.object({
   favorable: z.string().transform(transformToBoolean).or(z.boolean()),
@@ -46,6 +47,14 @@ type OpinionFormDataType = z.infer<typeof opinionFormSchema>;
 export default function RequestPage({ role }: { role: Role }) {
   const router = useRouter();
   const { requestResponseId } = router.query;
+
+  // Log para debug - dados iniciais
+  console.log("🔍 [requestResponseId].tsx - Dados iniciais:", {
+    role,
+    requestResponseId,
+    pathname: router.pathname,
+    asPath: router.asPath
+  });
 
   const { register, setValue, handleSubmit } = useForm<OpinionFormDataType>({
     resolver: zodResolver(opinionFormSchema),
@@ -77,6 +86,28 @@ export default function RequestPage({ role }: { role: Role }) {
         revalidateOnFocus: false,
       },
     );
+
+  // Log para debug - dados da resposta da API
+  console.log("📡 [requestResponseId].tsx - Dados da API:", {
+    isLoading,
+    requestResponseId,
+    requestResponse: requestResponse ? {
+      id: requestResponse.id,
+      requestId: requestResponse.requestId,
+      status: requestResponse.status,
+      request: requestResponse.request ? {
+        id: requestResponse.request.id,
+        status: requestResponse.request.status,
+        senderId: requestResponse.request.senderId
+      } : null,
+      // Dados completos para debug
+      fullRequestData: requestResponse.request
+    } : null,
+    // Status que será enviado para FormularioActionButton
+    statusToSend: requestResponse?.request?.status || requestResponse?.status || '',
+    // Verificações específicas para CHEFE_DIV_MEDICINA_4
+    isChefeDivMedicinaStatus: (requestResponse?.request?.status || requestResponse?.status || '') === 'AGUARDANDO_CHEFE_DIV_MEDICINA_4'
+  });
 
   const onSubmit = async (data: OpinionFormDataType) => {
     const formData = new FormData();
@@ -136,6 +167,40 @@ export default function RequestPage({ role }: { role: Role }) {
         Solicitação {requestResponse?.requestId}
       </h1>
       <div className="flex flex-col gap-4 px-2">
+        {/* Status da solicitação */}
+        {requestResponse?.request?.status && (
+          <h2 className="text-xl font-bold text-grafite">
+            Status: {requestResponse.request.status.replaceAll('_', ' ').replace(/\d/g, '')}
+          </h2>
+        )}
+        
+        {/* Botão para preencher formulário médico */}
+        {(() => {
+          console.log("🔍 [requestResponseId].tsx - Dados para FormularioActionButton:", {
+            requestResponseId,
+            requestId: requestResponse?.requestId,
+            role,
+            requestStatus: requestResponse?.request?.status || requestResponse?.status || '',
+            requestResponse: requestResponse ? {
+              id: requestResponse.id,
+              status: requestResponse.status,
+              requestId: requestResponse.requestId,
+              request: requestResponse.request ? {
+                id: requestResponse.request.id,
+                status: requestResponse.request.status,
+                senderId: requestResponse.request.senderId
+              } : null
+            } : null
+          });
+          return null;
+        })()}
+        {requestResponse?.requestId && (
+          <FormularioActionButton
+            requestId={requestResponse.requestId}
+            userRole={role}
+            requestStatus={requestResponse?.request?.status || requestResponse?.status || ''}
+          />
+        )}
         <Accordion.Root startOpen>
           <Accordion.Header>
             <h2 className="text-xl font-bold text-grafite">

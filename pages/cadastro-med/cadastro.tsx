@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -46,6 +46,7 @@ type FormularioMedicoData = z.infer<typeof formularioMedicoSchema>;
 export default function FormularioMedicoParte1() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { requestId } = router.query; // Captura o ID da solicitação da URL
 
   const {
@@ -64,6 +65,64 @@ export default function FormularioMedicoParte1() {
       leitoReservado: undefined,
     }
   });
+
+  // Função para buscar dados da solicitação e preencher o formulário automaticamente
+  useEffect(() => {
+    const fetchRequestData = async () => {
+      if (!requestId) return;
+      
+      try {
+        setIsLoading(true);
+        const response = await fetch(`/api/requests/${requestId}/basic-info`);
+        
+        if (!response.ok) {
+          throw new Error('Erro ao buscar dados da solicitação');
+        }
+        
+        const requestData = await response.json();
+        
+        // Preencher automaticamente os campos com os dados do paciente
+        if (requestData.pacient) {
+          setValue('nomeBeneficiario', requestData.pacient.name || '');
+          setValue('precCpMatriculaCpf', requestData.pacient.cpf || '');
+          setValue('postoGraduacaoTitular', requestData.pacient.rank || '');
+          
+          // Calcular idade se necessário (assumindo que não temos idade direta no banco)
+          // Por enquanto deixaremos em branco para o usuário preencher
+          setValue('idade', '');
+        }
+        
+        // Preencher outros campos se disponíveis
+        if (requestData.needsCompanion !== undefined) {
+          setValue('necessitaAcompanhante', requestData.needsCompanion);
+        }
+        
+        // Se já existir um formulário registrado, buscar dados dele
+        if (requestData.formulariosRegistrados && requestData.formulariosRegistrados.length > 0) {
+          const ultimoFormulario = requestData.formulariosRegistrados[requestData.formulariosRegistrados.length - 1];
+          setValue('consultaExame', ultimoFormulario.consultaExame || '');
+        }
+        
+        console.log('Dados da solicitação carregados:', requestData);
+        
+      } catch (error) {
+        console.error('Erro ao buscar dados da solicitação:', error);
+        Swal.fire({
+          title: 'Aviso',
+          text: 'Não foi possível carregar os dados automaticamente. Você pode preencher o formulário manualmente.',
+          icon: 'warning',
+          customClass: {
+            confirmButton:
+              'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+          },
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchRequestData();
+  }, [requestId, setValue]);
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { value, name } = e.target;
@@ -151,8 +210,26 @@ export default function FormularioMedicoParte1() {
     }
   };
 
+  // Mostrar indicador de carregamento enquanto busca os dados
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex flex-col gap-4 p-4">
+          <h1 className="text-2xl font-bold text-grafite">Formulário de Atendimento Médico - OMS Destino</h1>
+          <Card>
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-verde mx-auto mb-4"></div>
+                <p className="text-grafite">Carregando dados do paciente...</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
-    <Layout>
       <div className="flex flex-col gap-4 p-4">
         <h1 className="text-2xl font-bold text-grafite">Formulário de Atendimento Médico - OMS Destino</h1>
         <Card>
@@ -446,7 +523,6 @@ export default function FormularioMedicoParte1() {
           </form>
         </Card>
       </div>
-    </Layout>
   );
 }
 

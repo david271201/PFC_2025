@@ -51,6 +51,8 @@ type FormularioMedicoParte1Data = {
 export default function FormularioMedicoParte2() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pacientData, setPacientData] = useState<FormularioMedicoParte1Data | null>(null);
   const { requestId } = router.query; // Captura o ID da solicitação da URL
 
   const {
@@ -65,6 +67,62 @@ export default function FormularioMedicoParte2() {
       aprovacao: false,
     }
   });
+
+  // Função para buscar dados da solicitação e armazenar dados do paciente
+  useEffect(() => {
+    const fetchRequestData = async () => {
+      if (!requestId) return;
+      
+      try {
+        setIsLoading(true);
+        const response = await fetch(`/api/requests/${requestId}/basic-info`);
+        
+        if (!response.ok) {
+          throw new Error('Erro ao buscar dados da solicitação');
+        }
+        
+        const requestData = await response.json();
+        
+        // Armazenar dados do paciente para usar no formulário
+        if (requestData.pacient) {
+          const pacientInfo: FormularioMedicoParte1Data = {
+            nomeBeneficiario: requestData.pacient.name || '',
+            precCpMatriculaCpf: requestData.pacient.cpf || '',
+            postoGraduacaoTitular: requestData.pacient.rank || '',
+            idade: '', // Por enquanto deixaremos em branco
+            necessitaAcompanhante: requestData.needsCompanion || false,
+            consultaExame: '',
+          };
+
+          // Se já existir um formulário registrado, buscar dados dele
+          if (requestData.formulariosRegistrados && requestData.formulariosRegistrados.length > 0) {
+            const ultimoFormulario = requestData.formulariosRegistrados[requestData.formulariosRegistrados.length - 1];
+            pacientInfo.consultaExame = ultimoFormulario.consultaExame || '';
+          }
+
+          setPacientData(pacientInfo);
+        }
+        
+        console.log('Dados da solicitação carregados para parte 2:', requestData);
+        
+      } catch (error) {
+        console.error('Erro ao buscar dados da solicitação:', error);
+        Swal.fire({
+          title: 'Aviso',
+          text: 'Não foi possível carregar os dados automaticamente. Você pode preencher o formulário manualmente.',
+          icon: 'warning',
+          customClass: {
+            confirmButton:
+              'bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro',
+          },
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchRequestData();
+  }, [requestId]);
 
   const handleRadioChange = (fieldName: keyof FormularioMedicoParte2Data, value: string) => {
     setValue(fieldName, value === "sim");
@@ -85,13 +143,13 @@ export default function FormularioMedicoParte2() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // Dados do beneficiário (obrigatórios na estrutura)
-          nomeBeneficiario: "Formulário Parte 2 - RM Destino",
-          precCpMatriculaCpf: "N/A",
-          idade: "N/A",
-          postoGraduacaoTitular: "N/A",
-          necessitaAcompanhante: false,
-          consultaExame: "N/A",
+          // Dados do beneficiário (usar dados reais se disponíveis)
+          nomeBeneficiario: pacientData?.nomeBeneficiario || "Formulário Parte 2 - RM Destino",
+          precCpMatriculaCpf: pacientData?.precCpMatriculaCpf || "N/A",
+          idade: pacientData?.idade || "N/A",
+          postoGraduacaoTitular: pacientData?.postoGraduacaoTitular || "N/A",
+          necessitaAcompanhante: pacientData?.necessitaAcompanhante || false,
+          consultaExame: pacientData?.consultaExame || "N/A",
           
           // Campos da parte 2
           ...data,
@@ -152,10 +210,56 @@ export default function FormularioMedicoParte2() {
     }
   };
 
+  // Mostrar indicador de carregamento enquanto busca os dados
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex flex-col gap-4 p-4">
+          <h1 className="text-2xl font-bold text-grafite">Formulário de Atendimento Médico - RM Destino (Seç Sau Reg)</h1>
+          <Card>
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-verde mx-auto mb-4"></div>
+                <p className="text-grafite">Carregando dados do paciente...</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
-    <Layout>
       <div className="flex flex-col gap-4 p-4">
         <h1 className="text-2xl font-bold text-grafite">Formulário de Atendimento Médico - RM Destino (Seç Sau Reg)</h1>
+        
+        {/* Card com dados do paciente */}
+        {pacientData && (
+          <Card>
+            <div className="border-b border-gray-200 pb-4 mb-4">
+              <h2 className="text-lg font-semibold text-grafite mb-3">Dados do Beneficiário</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-600">Nome:</span>
+                  <p className="text-grafite">{pacientData.nomeBeneficiario}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">CPF:</span>
+                  <p className="text-grafite">{pacientData.precCpMatriculaCpf}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Posto/Graduação:</span>
+                  <p className="text-grafite">{pacientData.postoGraduacaoTitular}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Acompanhante:</span>
+                  <p className="text-grafite">{pacientData.necessitaAcompanhante ? 'Sim' : 'Não'}</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+        
         <Card>
           <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-7 gap-4">
             <div className="col-span-7 mb-4">
@@ -379,7 +483,6 @@ export default function FormularioMedicoParte2() {
           </form>
         </Card>
       </div>
-    </Layout>
   );
 }
 

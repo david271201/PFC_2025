@@ -82,42 +82,8 @@ export default async function handle(
         ]
       };
     } else {
-      // Tratamento especial para CHEFE_DIV_MEDICINA_4
-      if (role === 'CHEFE_DIV_MEDICINA' && dbUser.organizationId) {
-        // Para solicitações AGUARDANDO_CHEFE_DIV_MEDICINA_4, só mostrar se a organização do usuário
-        // for a receptora selecionada
-        whereClause = {
-          OR: [
-            // Opção 1: Status da solicitação é AGUARDANDO_CHEFE_DIV_MEDICINA_4
-            // e a organização do usuário é a receptora selecionada e o status da resposta é AGUARDANDO_CHEFE_DIV_MEDICINA_4
-            {
-              status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
-              requestResponses: {
-                some: {
-                  receiverId: dbUser.organizationId,
-                  selected: true,
-                  status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4
-                }
-              }
-            },
-            // Opção 2: Backup - Mostra solicitações com status AGUARDANDO_CHEFE_DIV_MEDICINA_4 
-            // que têm uma resposta para esta organização, mesmo que o status da resposta não esteja correto
-            // Isso é uma segurança para casos onde o status da resposta não foi atualizado
-            {
-              status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
-              requestResponses: {
-                some: {
-                  receiverId: dbUser.organizationId,
-                  selected: true,
-                  // Não filtramos por status nesse caso como backup
-                }
-              }
-            }
-          ]
-        };
-      }
-      // Tratamento especial para CHEFE_SECAO_REGIONAL_3 (semelhante ao CHEFE_DIV_MEDICINA_4)
-      else if (role === 'CHEFE_SECAO_REGIONAL' && dbUser.organizationId) {
+      // Tratamento especial para CHEFE_SECAO_REGIONAL_3
+      if (role === 'CHEFE_SECAO_REGIONAL' && dbUser.organizationId) {
         // Para solicitações AGUARDANDO_CHEFE_SECAO_REGIONAL_3, só mostrar se a organização do usuário
         // for a receptora
         whereClause = {
@@ -146,35 +112,7 @@ export default async function handle(
           ]
         };
         
-        console.log("Filtro para CHEFE_DIV_MEDICINA_4:", whereClause);
-        
-        // Log detalhado para depuração do status
-        const debugRequests = await prisma.request.findMany({
-          where: {
-            status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4
-          },
-          include: {
-            requestResponses: {
-              where: {
-                receiverId: dbUser.organizationId
-              },
-              select: {
-                id: true,
-                selected: true,
-                status: true,
-                receiverId: true
-              }
-            }
-          }
-        });
-        
-        console.log(`DEBUG: Encontradas ${debugRequests.length} solicitações com status AGUARDANDO_CHEFE_DIV_MEDICINA_4`);
-        debugRequests.forEach(req => {
-          console.log(`- Request ${req.id}, status: ${req.status}, respostas para org ${dbUser.organizationId}:`, 
-            req.requestResponses.map(r => `${r.id} (selected: ${r.selected}, status: ${r.status})`));
-        });
-      } else if (role === 'CHEFE_SECAO_REGIONAL' && dbUser.organizationId) {
-        console.log("Filtro para CHEFE_SECAO_REGIONAL_3:", whereClause);
+        console.log("Filtro para CHEFE_SECAO_REGIONAL_3:", JSON.stringify(whereClause, null, 2));
         
         // Log detalhado para depuração do status CHEFE_SECAO_REGIONAL_3
         const debugRequests = await prisma.request.findMany({
@@ -217,6 +155,11 @@ export default async function handle(
             }
           } : {})
         };
+        
+        // Log para CHEFE_DIV_MEDICINA para debug
+        if (role === 'CHEFE_DIV_MEDICINA') {
+          console.log("Usando lógica padrão para CHEFE_DIV_MEDICINA - whereClause:", JSON.stringify(whereClause, null, 2));
+        }
       }
     }
 
