@@ -5,8 +5,8 @@ import {
   UserType,
   terminalStatuses,
 } from '@/permissions/utils';
-import { auth } from '@@/auth';
-import prisma from '@@/prisma/prismaClient';
+import { auth } from '../../../../auth';
+import prisma from '../../../../prisma/prismaClient';
 import { ActionType, RequestStatus, Role } from '@prisma/client';
 import { PrismaClient } from '@prisma/client/extension';
 import formidable from 'formidable';

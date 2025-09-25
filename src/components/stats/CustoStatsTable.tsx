@@ -33,6 +33,8 @@ interface CustoStatsTableProps {
   filters: {
     region: { value: string; label: string; }[];
     organization: { value: string; label: string; }[];
+    startDate: string;
+    endDate: string;
   };
   isPrinting: boolean;
 }
@@ -41,10 +43,6 @@ export default function CustoStatsTable({ filters, isPrinting }: CustoStatsTable
   const [data, setData] = useState<CustoStatsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState({
-    startDate: '',
-    endDate: ''
-  });
 
   const fetchCustoStats = async () => {
     try {
@@ -53,11 +51,11 @@ export default function CustoStatsTable({ filters, isPrinting }: CustoStatsTable
 
       const params = new URLSearchParams();
       
-      if (dateRange.startDate) {
-        params.append('startDate', dateRange.startDate);
+      if (filters.startDate) {
+        params.append('startDate', filters.startDate);
       }
-      if (dateRange.endDate) {
-        params.append('endDate', dateRange.endDate);
+      if (filters.endDate) {
+        params.append('endDate', filters.endDate);
       }
       if (filters.region.length > 0) {
         params.append('regionIds', filters.region.map(r => r.value).join(','));
@@ -85,10 +83,6 @@ export default function CustoStatsTable({ filters, isPrinting }: CustoStatsTable
     fetchCustoStats();
   }, [filters]);
 
-  const handleDateRangeChange = () => {
-    fetchCustoStats();
-  };
-
   if (loading) {
     return (
       <div className="bg-white p-6 rounded-lg shadow-md">
@@ -114,45 +108,6 @@ export default function CustoStatsTable({ filters, isPrinting }: CustoStatsTable
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
       <h3 className="text-lg font-bold text-grafite mb-4">Custos Médios de Solicitações por Período</h3>
-      
-      {/* Filtros de data */}
-      {!isPrinting && (
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="font-semibold text-grafite mb-3">Filtrar por Período</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Data Inicial
-              </label>
-              <input
-                type="date"
-                value={dateRange.startDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-verde"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Data Final
-              </label>
-              <input
-                type="date"
-                value={dateRange.endDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-verde"
-              />
-            </div>
-            <div>
-              <button
-                onClick={handleDateRangeChange}
-                className="w-full px-4 py-2 bg-verde text-white rounded-md hover:bg-verdeEscuro focus:outline-none focus:ring-2 focus:ring-verde"
-              >
-                Atualizar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {data && (
         <div className="space-y-8">

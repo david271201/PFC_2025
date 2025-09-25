@@ -120,7 +120,7 @@ export default async function handle(
       return res.status(403).json({ message: 'Usuário não autorizado' });
     }
 
-    const { regions, organizations } = req.query;
+    const { regions, organizations, startDate, endDate } = req.query;
 
     const selectedRegions = decodeBase64(regions as string);
     const selectedOrganizations = decodeBase64(organizations as string);
@@ -136,6 +136,10 @@ export default async function handle(
             in: string[];
           }
         | undefined;
+      dateRange?: {
+        startDate?: string;
+        endDate?: string;
+      };
     } = {
       region: undefined,
       organization: undefined,
@@ -153,12 +157,37 @@ export default async function handle(
       };
     }
 
+    // Adicionar filtros de data
+    if (startDate || endDate) {
+      filters.dateRange = {};
+      if (startDate) {
+        filters.dateRange.startDate = startDate as string;
+      }
+      if (endDate) {
+        filters.dateRange.endDate = endDate as string;
+      }
+    }
+
     const requestsByOrganization = await getRequestsByOrganization(
       prisma,
       filters,
     );
 
     const requestsByRegion = getRequestsByRegion(requestsByOrganization);
+
+    // Construir filtro de data para o ranking CBHPM
+    const cbhpmDateFilter: any = {};
+    if (filters.dateRange?.startDate || filters.dateRange?.endDate) {
+      cbhpmDateFilter.createdAt = {};
+      if (filters.dateRange.startDate) {
+        cbhpmDateFilter.createdAt.gte = new Date(filters.dateRange.startDate);
+      }
+      if (filters.dateRange.endDate) {
+        const endDate = new Date(filters.dateRange.endDate);
+        endDate.setHours(23, 59, 59, 999);
+        cbhpmDateFilter.createdAt.lte = endDate;
+      }
+    }
 
     const cbhpmRanking = await prisma.request.groupBy({
       by: ['cbhpmCode'],
@@ -167,6 +196,7 @@ export default async function handle(
           regionId: filters.region,
           id: filters.organization,
         },
+        ...cbhpmDateFilter,
       },
       _count: {
         _all: true,

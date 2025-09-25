@@ -50,9 +50,13 @@ export default function StatsPage() {
       value: string;
       label: string;
     }[];
+    startDate: string;
+    endDate: string;
   }>({
     region: [],
     organization: [],
+    startDate: '',
+    endDate: '',
   });
 
   const [isPrinting, setisPrinting] = useState(false);
@@ -76,7 +80,6 @@ export default function StatsPage() {
     value: org.id,
     label: org.name,
   }));
-
   const { data: statsData, isLoading: isLoadingStats } = useSWR<{
     requestsByOrganization: {
       id: string;
@@ -105,14 +108,14 @@ export default function StatsPage() {
       organizations: btoa(
         filters.organization.map((filter) => filter.value).join(','),
       ),
+      startDate: filters.startDate,
+      endDate: filters.endDate,
     })}`,
     fetcher,
     {
       revalidateOnFocus: false,
     },
-  );
-
-  const handleFilterChange = (
+  );  const handleFilterChange = (
     newValue: MultiValue<{
       value: string;
       label: string;
@@ -124,6 +127,74 @@ export default function StatsPage() {
       [filter]: newValue,
     }));
   };
+
+  const handleDateChange = (field: 'startDate' | 'endDate', value: string) => {
+    setFilters((prevFilters) => ({
+      ...prevFilters,
+      [field]: value,
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      region: [],
+      organization: [],
+      startDate: '',
+      endDate: '',
+    });
+  };
+
+  const exportToExcel = async () => {
+    try {
+      setisPrinting(true);
+      
+      const params = new URLSearchParams({
+        regions: btoa(filters.region.map((filter) => filter.value).join(',')),
+        organizations: btoa(
+          filters.organization.map((filter) => filter.value).join(','),
+        ),
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      });
+
+      const response = await fetch(`/api/stats/export-excel?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error('Erro ao gerar planilha');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      
+      // Gerar nome do arquivo baseado nos filtros
+      const currentDate = new Date().toISOString().split('T')[0];
+      let filename = `estatisticas-dsau-${currentDate}`;
+      
+      if (filters.startDate || filters.endDate) {
+        filename += '-periodo';
+      }
+      if (filters.region.length > 0) {
+        filename += '-regioes';
+      }
+      if (filters.organization.length > 0) {
+        filename += '-organizacoes';
+      }
+      
+      a.download = `${filename}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Erro ao exportar planilha:', error);
+      alert('Erro ao gerar planilha. Tente novamente.');
+    } finally {
+      setisPrinting(false);
+    }  };
+
   const cbhpmRanking = statsData?.cbhpmRanking.map((item) => {
     const cbhpm = cbhpmInfo.find((c) => c.id === item.cbhpmCode);
 
@@ -261,46 +332,101 @@ export default function StatsPage() {
     );
   }
 
-  return (
-    <div className="flex flex-col gap-4 p-4">
-      <Button
-        onClick={() => {
-          setisPrinting(true);
-          setTimeout(() => {
-            window.print();
-            setisPrinting(false);
-          }, 100);
-        }}
-        className="w-fit print:hidden"
-      >
-        Exportar relatório
-      </Button>      <h1 className="text-2xl font-bold text-grafite">Estatísticas</h1>
+  return (    <div className="flex flex-col gap-4 p-4">
+      {/* Botões de Ação */}
+      <div className="flex flex-wrap gap-3 print:hidden">
+        <Button
+          onClick={() => {
+            setisPrinting(true);
+            setTimeout(() => {
+              window.print();
+              setisPrinting(false);
+            }, 100);
+          }}
+          className="w-fit"
+        >
+          📄 Exportar relatório PDF
+        </Button>
+        
+        <Button
+          onClick={exportToExcel}
+          disabled={isPrinting}
+          className="w-fit bg-green-600 hover:bg-green-700"
+        >
+          {isPrinting ? '⏳ Gerando...' : '📊 Exportar planilha Excel'}
+        </Button>
+      </div><h1 className="text-2xl font-bold text-grafite">Estatísticas</h1>
       
-      {/* Filtros */}
-      <div className="flex items-center gap-4 print:hidden">
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-grafite">Região:</span>
-          <ReactSelect
-            isMulti
-            value={filters.region}
-            options={regionOptions}
-            onChange={(newValue) => handleFilterChange(newValue, 'region')}
-            placeholder="Todas"
-            className="min-w-44"
-          />
+      {/* Filtros Globais */}
+      <div className="bg-white p-4 rounded-lg shadow-md print:hidden">
+        <h3 className="text-lg font-semibold text-grafite mb-4">Filtros</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          {/* Filtro de Data Inicial */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Data Inicial
+            </label>
+            <input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => handleDateChange('startDate', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-verde"
+            />
+          </div>
+
+          {/* Filtro de Data Final */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Data Final
+            </label>
+            <input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => handleDateChange('endDate', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-verde"
+            />
+          </div>
+
+          {/* Filtro de Região */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Região
+            </label>
+            <ReactSelect
+              isMulti
+              value={filters.region}
+              options={regionOptions}
+              onChange={(newValue) => handleFilterChange(newValue, 'region')}
+              placeholder="Todas"
+              className="min-w-full"
+            />
+          </div>
+
+          {/* Filtro de OM */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              OM
+            </label>
+            <ReactSelect
+              isMulti
+              value={filters.organization}
+              options={organizationOptions}
+              onChange={(newValue) => handleFilterChange(newValue, 'organization')}
+              placeholder="Todas"
+              className="min-w-full"
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-grafite">OM:</span>
-          <ReactSelect
-            isMulti
-            value={filters.organization}
-            options={organizationOptions}
-            onChange={(newValue) =>
-              handleFilterChange(newValue, 'organization')
-            }
-            placeholder="Todas"
-            className="min-w-44"
-          />
+
+        {/* Botão Limpar Filtros */}
+        <div className="flex justify-end">
+          <button
+            onClick={clearFilters}
+            className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+          >
+            Limpar Filtros
+          </button>
         </div>
       </div>
 

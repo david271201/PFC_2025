@@ -1,6 +1,6 @@
 import { checkPermission, UserType } from '@/permissions/utils';
-import { auth } from '@@/auth';
-import prisma from '@@/prisma/prismaClient';
+import { auth } from '../../../../auth';
+import prisma from '../../../../prisma/prismaClient';
 import { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function handle(

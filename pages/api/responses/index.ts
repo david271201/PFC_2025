@@ -1,7 +1,7 @@
 import { checkPermission, UserType, statusTransitions } from '@/permissions/utils';
 import { isStatusForRole } from '@/utils';
-import { auth } from '@@/auth';
-import prisma from '@@/prisma/prismaClient';
+import { auth } from '../../../auth';
+import prisma from '../../../prisma/prismaClient';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { RequestStatus } from '@prisma/client';
 

@@ -1,7 +1,7 @@
 import logAction from '@/log-action';
 import { checkPermission, UserType } from '@/permissions/utils';
-import { auth } from '@@/auth';
-import prisma from '@@/prisma/prismaClient';
+import { auth } from '../../../../auth';
+import prisma from '../../../../prisma/prismaClient';
 import { ActionType, RequestStatus } from '@prisma/client';
 import formidable from 'formidable';
 import { NextApiRequest, NextApiResponse } from 'next';

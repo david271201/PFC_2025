@@ -1,5 +1,5 @@
 import { checkPermission, UserType } from '@/permissions/utils';
-import { auth } from '@@/auth';
+import { auth } from '../../../auth';
 import { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
