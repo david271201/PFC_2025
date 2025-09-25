@@ -328,18 +328,18 @@ export default async function handle(
       ]);
 
       return res.status(200).json(undefined);
-    }
-
-    // Tratamento para CHEM_2 - apenas para configurar a response correta quando vai para CHEFE_DIV_MEDICINA_4
+    }    // Tratamento para CHEM_2 - apenas para configurar a response correta quando vai para CHEFE_DIV_MEDICINA_4
     if (request.status === RequestStatus.AGUARDANDO_CHEM_2 && nextStatus === RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4) {
-      // Buscar a OMS de referência da região do remetente (normalmente teria usuários CHEFE_DIV_MEDICINA)
-      const senderRegionId = request.sender?.regionId;
-      
-      if (senderRegionId) {
-        // Buscar todas as organizações da região do remetente
-        const organizationsInRegion = await prisma.organization.findMany({
+      // Em vez de buscar na região do remetente, devemos usar as organizações de destino (requestedOrganizationIds)
+      if (request.requestedOrganizationIds && request.requestedOrganizationIds.length > 0) {
+        console.log('Configurando resposta para CHEFE_DIV_MEDICINA_4 nas organizações de destino:', request.requestedOrganizationIds);
+        
+        // Buscar as organizações de destino que tenham usuários CHEFE_DIV_MEDICINA
+        const destinationOrganizations = await prisma.organization.findMany({
           where: {
-            regionId: senderRegionId,
+            id: {
+              in: request.requestedOrganizationIds,
+            },
           },
           select: {
             id: true,
@@ -355,28 +355,28 @@ export default async function handle(
           }
         });
         
-        // Encontrar a organização com usuários CHEFE_DIV_MEDICINA (que seria a OMS de referência)
-        const referenceOrg = organizationsInRegion.find(org => org.users.length > 0);
+        // Encontrar a primeira organização de destino com usuários CHEFE_DIV_MEDICINA
+        const destinationOrg = destinationOrganizations.find(org => org.users.length > 0);
         
-        if (referenceOrg) {
-          console.log('Configurando OMS de referência para CHEFE_DIV_MEDICINA_4:', referenceOrg.name);
+        if (destinationOrg) {
+          console.log('Configurando organização de destino para CHEFE_DIV_MEDICINA_4:', destinationOrg.name);
           
-          // Buscar ou criar uma resposta para a OMS de referência
-          let refResponse = await prisma.requestResponse.findFirst({
+          // Buscar ou criar uma resposta para a organização de destino
+          let destResponse = await prisma.requestResponse.findFirst({
             where: {
               requestId: requestId as string,
-              receiverId: referenceOrg.id,
+              receiverId: destinationOrg.id,
             },
           });
           
-          // Se não existir, criar uma nova resposta para a OMS de referência
-          if (!refResponse) {
-            refResponse = await prisma.requestResponse.create({
+          // Se não existir, criar uma nova resposta para a organização de destino
+          if (!destResponse) {
+            destResponse = await prisma.requestResponse.create({
               data: {
                 requestId: requestId as string,
-                receiverId: referenceOrg.id,
+                receiverId: destinationOrg.id,
                 selected: false,
-                status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4, // Definir o status correto
+                status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
               },
             });
           }
@@ -391,31 +391,77 @@ export default async function handle(
             },
           });
           
-          // Marcar a resposta da OMS de referência como selecionada e atualizar o status
+          // Marcar apenas a resposta da organização de destino como selecionada
           await prisma.requestResponse.update({
-            where: { id: refResponse.id },
+            where: { id: destResponse.id },
             data: { 
               selected: true,
-              status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4, // Garantir que o status esteja correto
+              status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
             },
           });
           
           // Atualizar o status de todas as outras respostas para AGUARDANDO_CHEFE_DIV_MEDICINA_4
-          // Isso é necessário para que não apareçam como APROVADO
           await prisma.requestResponse.updateMany({
             where: {
               requestId: requestId as string,
               NOT: {
-                id: refResponse.id
+                id: destResponse.id
               }
             },
             data: {
               status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4
             },
           });
+          
+          console.log(`Solicitação ${requestId} configurada para aparecer apenas para CHEFE_DIV_MEDICINA da organização ${destinationOrg.name}`);
         } else {
-          console.log('Não foi possível encontrar uma OMS de referência com CHEFE_DIV_MEDICINA na região', senderRegionId);
+          console.log('Nenhuma organização de destino possui usuários CHEFE_DIV_MEDICINA:', request.requestedOrganizationIds);
+          
+          // Fallback: se nenhuma organização de destino tem CHEFE_DIV_MEDICINA,
+          // ainda precisamos criar uma resposta para evitar erro no fluxo
+          const firstDestinationOrgId = request.requestedOrganizationIds[0];
+          
+          let fallbackResponse = await prisma.requestResponse.findFirst({
+            where: {
+              requestId: requestId as string,
+              receiverId: firstDestinationOrgId,
+            },
+          });
+          
+          if (!fallbackResponse) {
+            fallbackResponse = await prisma.requestResponse.create({
+              data: {
+                requestId: requestId as string,
+                receiverId: firstDestinationOrgId,
+                selected: false,
+                status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
+              },
+            });
+          }
+          
+          // Desmarcar todas as respostas
+          await prisma.requestResponse.updateMany({
+            where: {
+              requestId: requestId as string,
+            },
+            data: {
+              selected: false,
+            },
+          });
+          
+          // Marcar apenas a resposta da primeira organização de destino
+          await prisma.requestResponse.update({
+            where: { id: fallbackResponse.id },
+            data: { 
+              selected: true,
+              status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
+            },
+          });
+          
+          console.log(`Fallback: Solicitação ${requestId} configurada para a primeira organização de destino`);
         }
+      } else {
+        console.log('Solicitação não possui organizações de destino definidas (requestedOrganizationIds vazio)');
       }
     }
     
