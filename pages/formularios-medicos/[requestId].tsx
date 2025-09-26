@@ -126,19 +126,31 @@ export default function VisualizarFormulariosMedicos() {
         <h1 className="text-2xl font-bold text-grafite">Formulários Médicos da Solicitação</h1>
         
         {formularios.map((formulario, index) => {
+          // Detectar se é parte 2 baseado nos campos específicos da parte 2
+          const temCamposParte2 = formulario.hotelReservado !== null || 
+                                  formulario.motorista1 || 
+                                  formulario.motorista2 || 
+                                  formulario.motorista3 || 
+                                  formulario.motorista4 ||
+                                  formulario.aprovacao !== null ||
+                                  formulario.justificativaHotelReservado;
+          
           const isParte2 = formulario.consultaExame.includes('RM_DESTINO') || 
-                           formulario.consultaExame.includes('Parte 2');
+                           formulario.consultaExame.includes('Parte 2') ||
+                           temCamposParte2;
           
           return (
             <Card key={formulario.id} className="mb-6">
               <h2 className="text-xl font-semibold text-grafite mb-4">
-                {isParte2 ? 'Formulário RM Destino (Parte 2)' : 'Formulário OMS Destino (Parte 1)'}
+                {isParte2 && temCamposParte2 ? 'Formulário Completo (Partes 1 e 2)' : 
+                 isParte2 ? 'Formulário RM Destino (Parte 2)' : 'Formulário OMS Destino (Parte 1)'}
               </h2>
               <p className="text-sm text-gray-500 mb-4">
                 Preenchido em: {formatarData(formulario.createdAt)}
               </p>
               
-              {!isParte2 ? (
+              {/* Parte 1: Dados do Beneficiário e Avaliações */}
+              {formulario.nomeBeneficiario && !formulario.nomeBeneficiario.includes('Formulário Parte 2') && (
                 // Conteúdo da Parte 1
                 <>
                   <div className="border-b border-gray-200 pb-4 mb-4">
@@ -238,9 +250,15 @@ export default function VisualizarFormulariosMedicos() {
                     )}
                   </div>
                 </>
-              ) : (
-                // Conteúdo da Parte 2
+              )}
+              
+              {/* Parte 2: Assistência Social e Traslado (quando preenchida) */}
+              {temCamposParte2 && (
                 <>
+                  <div className="mt-6 pt-4 border-t-2 border-verde">
+                    <h3 className="text-lg font-semibold text-verde mb-4">📋 Parte 2 - RM Destino (Seção de Saúde Regional)</h3>
+                  </div>
+                  
                   <div className="border-b border-gray-200 pb-4 mb-4">
                     <h3 className="font-semibold mb-2">Assistência Social</h3>
                     <div>
