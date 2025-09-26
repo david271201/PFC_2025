@@ -167,8 +167,8 @@ export default function FormularioMedicoParte2() {
       
       const formularioData = await formularioResponse.json();
       
-      // Atualizar o fluxo da solicitação através da API de avaliação
-      const avaliacaoResponse = await fetch('/api/avaliacoes/chefe-secao-regional', {
+      // Atualizar o fluxo da solicitação através da API de formulários médicos
+      const avaliacaoResponse = await fetch('/api/formularios-medicos/cadastrar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
