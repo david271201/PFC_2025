@@ -288,9 +288,115 @@ export default async function handler(
         error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     }
+  } else if (req.method === 'PATCH') {
+    try {
+      console.log('=== PROCESSANDO PATCH (UPDATE) ===');
+      console.log('Dados recebidos do frontend:', JSON.stringify(req.body, null, 2));
+      
+      // Verificar se o body tem dados
+      if (!req.body || Object.keys(req.body).length === 0) {
+        console.log('❌ Body da requisição está vazio!');
+        return res.status(400).json({
+          message: 'Dados não foram enviados corretamente',
+          received: req.body
+        });
+      }
+      
+      // Validar dados do formulário
+      console.log('Iniciando validação com Zod para update...');
+      const dadosFormulario = formularioMedicoSchema.parse(req.body);
+      console.log('✅ Validação Zod concluída com sucesso');
+      
+      // Verificar se a solicitação existe
+      console.log('Verificando se a solicitação existe no banco...');
+      const requestExists = await prisma.request.findUnique({
+        where: { id: dadosFormulario.requestId }
+      });
+      
+      if (!requestExists) {
+        console.log('ERRO: Solicitação não encontrada');
+        return res.status(404).json({ message: 'Solicitação não encontrada' });
+      }
+
+      // Buscar o formulário existente baseado no requestId
+      console.log('Buscando formulário existente para o requestId:', dadosFormulario.requestId);
+      const formularioExistente = await prisma.formularioMedico.findFirst({
+        where: { requestId: dadosFormulario.requestId }
+      });
+      
+      if (!formularioExistente) {
+        console.log('ERRO: Formulário não encontrado para atualização');
+        return res.status(404).json({ message: 'Formulário não encontrado para atualização' });
+      }
+
+      // Preparar dados para atualização (apenas os campos da parte 2)
+      const dadosParaUpdate = {
+        // Assistência Social
+        hotelReservado: dadosFormulario.hotelReservado,
+        justificativaHotelReservado: dadosFormulario.justificativaHotel,
+        
+        // Traslado
+        motorista1: dadosFormulario.motorista1,
+        horario1: dadosFormulario.horario1,
+        motorista2: dadosFormulario.motorista2,
+        horario2: dadosFormulario.horario2,
+        motorista3: dadosFormulario.motorista3,
+        horario3: dadosFormulario.horario3,
+        motorista4: dadosFormulario.motorista4,
+        horario4: dadosFormulario.horario4,
+        
+        // Aprovação
+        aprovacao: dadosFormulario.aprovacao,
+        
+        // Atualizar timestamp
+        updatedAt: new Date()
+      };
+      
+      console.log('Dados preparados para UPDATE:');
+      console.log(JSON.stringify(dadosParaUpdate, null, 2));
+
+      // Atualizar no banco de dados usando Prisma
+      console.log('=== TENTANDO ATUALIZAR NO BANCO ===');
+      console.log('Atualizando formulário com ID:', formularioExistente.id);
+      
+      const formularioAtualizado = await prisma.formularioMedico.update({
+        where: { id: formularioExistente.id },
+        data: dadosParaUpdate
+      });
+      
+      console.log('✅ Formulário médico atualizado com sucesso!');
+      console.log('ID do formulário atualizado:', formularioAtualizado.id);
+
+      console.log('=== SUCESSO COMPLETO (UPDATE) ===');
+      return res.status(200).json({
+        message: 'Formulário médico atualizado com sucesso',
+        id: formularioAtualizado.id,
+        requestId: dadosFormulario.requestId,
+        parte: dadosFormulario.parte,
+        action: 'updated'
+      });
+    } catch (error) {
+      console.log('=== ERRO CAPTURADO NO PATCH ===');
+      console.error('Erro completo:', error);
+      
+      if (error instanceof z.ZodError) {
+        console.error('❌ Erro de validação Zod:', error.errors);
+        return res.status(400).json({
+          message: 'Dados de formulário inválidos',
+          errors: error.errors
+        });
+      }
+
+      console.error('❌ Erro geral ao atualizar formulário médico:', error);
+      
+      return res.status(500).json({
+        message: 'Erro ao atualizar formulário médico',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    }
   } else {
     // Método não permitido
-    res.setHeader('Allow', ['POST']);
+    res.setHeader('Allow', ['POST', 'PATCH']);
     res.status(405).json({ message: `Método ${req.method} não permitido` });
   }
 }

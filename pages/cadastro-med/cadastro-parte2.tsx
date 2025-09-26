@@ -136,9 +136,9 @@ export default function FormularioMedicoParte2() {
         throw new Error('ID da solicitação não fornecido');
       }
       
-      // Enviar para a API de cadastro com o ID da solicitação
+      // Enviar para a API de cadastro com o ID da solicitação (PATCH para atualizar)
       const formularioResponse = await fetch('/api/formularios-medicos/cadastrar', {
-        method: 'POST',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -166,27 +166,10 @@ export default function FormularioMedicoParte2() {
       }
       
       const formularioData = await formularioResponse.json();
-      
-      // Atualizar o fluxo da solicitação através da API de formulários médicos
-      const avaliacaoResponse = await fetch('/api/formularios-medicos/cadastrar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          requestId: requestId,
-          formularioId: formularioData.id
-        }),
-      });
-      
-      if (!avaliacaoResponse.ok) {
-        const error = await avaliacaoResponse.json();
-        throw new Error(error.message || 'Erro ao atualizar status da solicitação');
-      }
 
       Swal.fire({
         title: 'Sucesso',
-        text: 'Formulário médico enviado com sucesso e avaliação concluída',
+        text: 'Formulário médico atualizado com sucesso',
         icon: 'success',
         customClass: {
           confirmButton:
