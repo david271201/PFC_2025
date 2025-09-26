@@ -23,21 +23,21 @@ const formularioMedicoSchema = z.object({
   consultaExame: z.string().min(1, "Consulta/exame/procedimento solicitado é obrigatório"),
   
   // Campos da Divisão de Medicina
-  profissionalCiente: z.string().optional(),
+  profissionalCiente: z.string().optional().transform((val) => val === "sim" ? true : val === "nao" ? false : undefined),
   justificativaProfissionalCiente: z.string().optional(),
   
   // Campos do Depósito de Material Cirúrgico
-  materialDisponivel: z.string().optional(),
+  materialDisponivel: z.string().optional().transform((val) => val === "sim" ? true : val === "nao" ? false : undefined),
   justificativaMaterialDisponivel: z.string().optional(),
   
   // Campos do Centro Cirúrgico
-  pacienteNoMapa: z.string().optional(),
+  pacienteNoMapa: z.string().optional().transform((val) => val === "sim" ? true : val === "nao" ? false : undefined),
   justificativaPacienteNoMapa: z.string().optional(),
-  setorEmCondicoes: z.string().optional(),
+  setorEmCondicoes: z.string().optional().transform((val) => val === "sim" ? true : val === "nao" ? false : undefined),
   justificativaSetorEmCondicoes: z.string().optional(),
   
   // Campos da Unidade de Internação
-  leitoReservado: z.string().optional(),
+  leitoReservado: z.string().optional().transform((val) => val === "sim" ? true : val === "nao" ? false : undefined),
   justificativaLeitoReservado: z.string().optional(),
 });
 
@@ -141,6 +141,15 @@ export default function FormularioMedicoParte1() {
         throw new Error('ID da solicitação não fornecido');
       }
       
+      // Transformar os dados conforme necessário para a API
+      const formData = {
+        ...data,
+        requestId: requestId as string, // Vincula o formulário à solicitação original
+        parte: 'OMS_DESTINO' // Indica que este formulário é da OMS de destino (organização B)
+      };
+      
+      console.log('Dados do formulário antes do envio:', formData);
+      
       // Enviar para a API de cadastro com o ID da solicitação
       // Isso salva os dados na tabela FormularioMedico com referência à solicitação (requestId)
       // Mesmo quando a organização A (remetente) envia uma solicitação para a organização B (receptora),
@@ -150,11 +159,7 @@ export default function FormularioMedicoParte1() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...data,
-          requestId: requestId as string, // Vincula o formulário à solicitação original
-          parte: 'OMS_DESTINO' // Indica que este formulário é da OMS de destino (organização B)
-        }),
+        body: JSON.stringify(formData),
       });
 
       if (!formularioResponse.ok) {
@@ -167,7 +172,7 @@ export default function FormularioMedicoParte1() {
       // Atualizar o fluxo da solicitação através da API de avaliação
       // Este endpoint irá atualizar o status da solicitação para o próximo na sequência
       // A solicitação mantém a organização B como receptora (quando em AGUARDANDO_CHEFE_DIV_MEDICINA_4)
-      const avaliacaoResponse = await fetch('/api/avaliacoes/chefe-div-medicina', {
+      const avaliacaoResponse = await fetch('/api/formularios-medicos/cadastrar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

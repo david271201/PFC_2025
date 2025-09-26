@@ -1,17 +1,12 @@
 /**
- * Utilitários para manipulação consistente de valores monetários em todo o sistema
- */
-
-/**
  * Formata um valor numérico para exibição em formato de moeda brasileira (R$)
  * @param value Valor numérico a ser formatado (pode ser em centavos ou valor decimal)
  * @param inCents Se true, o valor está em centavos e precisa ser convertido para reais
  * @returns String formatada em reais (R$)
  */
 export function formatCurrency(value: number, inCents: boolean = false): string {
-  // Não precisamos mais converter de centavos para reais
-  // Mantemos o parâmetro inCents para compatibilidade com código existente
-  const realValue = value;
+  // Se o valor está em centavos, converte para reais
+  const realValue = inCents ? value / 100 : value;
   
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -22,24 +17,17 @@ export function formatCurrency(value: number, inCents: boolean = false): string 
 }
 
 /**
- * Estas funções foram mantidas para compatibilidade com código existente,
- * mas não realizam mais conversões agora que estamos armazenando valores decimais diretamente.
- */
-export function toCents(value: number): number {
-  return value; // Não convertemos mais para centavos
-}
-
-export function toReais(cents: number): number {
-  return cents; // Não convertemos mais de centavos para reais
-}
-
-/**
- * Analisa um valor em formato de string e converte para número
- * Lida com valores em formato brasileiro (vírgula como separador decimal)
- * @param value String representando um valor monetário
- * @returns Valor numérico
+ * Converte uma string formatada em moeda para um número
+ * @param value String formatada em moeda (pode incluir R$, pontos e vírgulas)
+ * @returns Número decimal
  */
 export function parseStringToNumber(value: string): number {
-  if (!value) return 0;
-  return parseFloat(value.replace('.', '').replace(',', '.'));
+  // Remove todos os caracteres exceto números e vírgula
+  const cleanValue = value.replace(/[^\d,]/g, '');
+  
+  // Se não houver valor, retorna 0
+  if (!cleanValue) return 0;
+  
+  // Converte a string para número, substituindo vírgula por ponto
+  return parseFloat(cleanValue.replace(',', '.'));
 }

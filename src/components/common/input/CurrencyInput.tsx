@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { parseStringToNumber } from '@/utils/currency';
+import React, { useState, useEffect } from 'react';
 
 interface CurrencyInputProps {
   label: string;
@@ -8,7 +7,7 @@ interface CurrencyInputProps {
   disabled?: boolean;
   className?: string;
   placeholder?: string;
-  inCents?: boolean; // Flag para indicar se o valor está em centavos
+  inCents?: boolean;
 }
 
 const CurrencyInput: React.FC<CurrencyInputProps> = ({
@@ -20,8 +19,8 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
   placeholder = '0,00',
   inCents = false,
 }) => {
-  // Não precisamos mais converter de centavos para reais, pois estamos usando valores decimais diretamente
-  const realValue = value;
+  // Converte valor de centavos para reais se necessário
+  const realValue = inCents ? value / 100 : value;
   
   // Mantém o valor de exibição como string para facilitar a edição
   const [displayValue, setDisplayValue] = useState<string>(
@@ -29,9 +28,10 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
   );
 
   // Atualiza o valor de exibição quando o valor da prop mudar (efeito externo)
-  React.useEffect(() => {
-    setDisplayValue(value === 0 ? '' : value.toString().replace('.', ','));
-  }, [value]);
+  useEffect(() => {
+    const valueToDisplay = inCents ? value / 100 : value;
+    setDisplayValue(valueToDisplay === 0 ? '' : valueToDisplay.toString().replace('.', ','));
+  }, [value, inCents]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -48,11 +48,11 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
     // Atualizar o valor de exibição
     setDisplayValue(formattedValue);
     
-    // Converte para número decimal
-    const numericValue = parseStringToNumber(formattedValue);
+    // Converte para número
+    const numericValue = formattedValue ? parseFloat(formattedValue.replace(',', '.')) : 0;
     
-    // Não precisamos mais multiplicar por 100, pois estamos armazenando valores decimais diretamente
-    onChange(numericValue);
+    // Se o valor deve ser armazenado em centavos, multiplica por 100
+    onChange(inCents ? Math.round(numericValue * 100) : numericValue);
   };
 
   return (
