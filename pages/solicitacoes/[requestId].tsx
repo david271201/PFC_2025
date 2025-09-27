@@ -132,7 +132,7 @@ export default function RequestPage({ role }: { role: Role }) {
             </div>
           )}
         {(isStatusForRole(request?.status, role) || 
-           (role === Role.OPERADOR_FUSEX && request?.status === RequestStatus.AGUARDANDO_OPERADOR_FUSEX_CUSTOS)) && 
+           (role === Role.OPERADOR_FUSEX && (request?.status === RequestStatus.AGUARDANDO_OPERADOR_FUSEX_REALIZACAO || request?.status === RequestStatus.AGUARDANDO_OPERADOR_FUSEX_CUSTOS))) && 
            request?.status !== RequestStatus.APROVADO && (
           <RequestForm
             status={request?.status}

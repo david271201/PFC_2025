@@ -71,7 +71,7 @@ export default async function handler(
       }
       
       // Verificar se o status da solicitação é o correto
-      if (request.status !== 'AGUARDANDO_OPERADOR_FUSEX_CUSTOS') {
+      if (request.status !== 'AGUARDANDO_OPERADOR_FUSEX_REALIZACAO' && request.status !== 'AGUARDANDO_OPERADOR_FUSEX_CUSTOS') {
         return res.status(403).json({ 
           message: 'A solicitação não está na etapa correta para adicionar custos'
         });
