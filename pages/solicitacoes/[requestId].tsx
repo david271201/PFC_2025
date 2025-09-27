@@ -141,8 +141,9 @@ export default function RequestPage({ role }: { role: Role }) {
           />
         )}
         
-        {/* Componente de custos - aparece apenas para Operador FUSEX na etapa de custos ou para visualização após preenchidos */}
-        {(request?.status === RequestStatus.AGUARDANDO_OPERADOR_FUSEX_CUSTOS || 
+        {/* Componente de custos - aparece para Operador FUSEX nas etapas de realização e custos, ou para visualização após preenchidos */}
+        {(
+           request?.status === RequestStatus.AGUARDANDO_OPERADOR_FUSEX_CUSTOS || 
            (requestId && request?.custos && request.custos.length > 0)) && (
           <Accordion.Root startOpen>
             <Accordion.Header>
@@ -154,7 +155,7 @@ export default function RequestPage({ role }: { role: Role }) {
               <RequestCustos 
                 requestId={requestId as string} 
                 userRole={role} 
-                isEditable={request?.status === RequestStatus.AGUARDANDO_OPERADOR_FUSEX_CUSTOS} 
+                isEditable={request?.status === RequestStatus.AGUARDANDO_OPERADOR_FUSEX_REALIZACAO || request?.status === RequestStatus.AGUARDANDO_OPERADOR_FUSEX_CUSTOS} 
               />
             </Accordion.Body>
           </Accordion.Root>

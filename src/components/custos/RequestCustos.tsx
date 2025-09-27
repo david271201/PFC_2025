@@ -1,12 +1,16 @@
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import Card from '@/components/common/card';
 import Button from '@/components/common/button';
 import { Role } from '@prisma/client';
+import { TrashIcon } from '@heroicons/react/24/outline';
+import { UserType } from '@/permissions/utils';
 
 type CustoProps = {
   id: string;
   descricao: string;
   valor: number;
+  usuarioId: string;
   createdAt: string;
   usuario: {
     name: string;
@@ -21,6 +25,8 @@ type CustosFormProps = {
 };
 
 export default function CustosForm({ requestId, userRole, isEditable, onCustoAdded }: CustosFormProps) {
+  const { data: session } = useSession();
+  const currentUser = session?.user as UserType;
   const [custos, setCustos] = useState<CustoProps[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +35,7 @@ export default function CustosForm({ requestId, userRole, isEditable, onCustoAdd
     valor: 0
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Carregar custos existentes quando o componente é montado
   useState(() => {
@@ -107,6 +114,40 @@ export default function CustosForm({ requestId, userRole, isEditable, onCustoAdd
     }).format(value);
   };
 
+  const handleDelete = async (custoId: string) => {
+    if (!confirm('Tem certeza que deseja deletar este custo?')) {
+      return;
+    }
+
+    setDeletingId(custoId);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/requests/${requestId}/custos/${custoId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao deletar custo');
+      }
+
+      // Recarregar custos
+      const updatedCustos = await fetch(`/api/requests/${requestId}/custos`);
+      const updatedData = await updatedCustos.json();
+      setCustos(updatedData);
+
+      // Notificar o componente pai que um custo foi removido
+      if (onCustoAdded) {
+        onCustoAdded();
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Erro ao deletar custo');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <Card className="p-4">
@@ -182,6 +223,9 @@ export default function CustosForm({ requestId, userRole, isEditable, onCustoAdd
                 <th className="py-2 px-4 border-b text-right">Valor</th>
                 <th className="py-2 px-4 border-b text-left">Adicionado por</th>
                 <th className="py-2 px-4 border-b text-left">Data</th>
+                {isEditable && userRole === Role.OPERADOR_FUSEX && (
+                  <th className="py-2 px-4 border-b text-center">Ações</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -193,12 +237,31 @@ export default function CustosForm({ requestId, userRole, isEditable, onCustoAdd
                   <td className="py-2 px-4 border-b">
                     {new Date(custo.createdAt).toLocaleDateString('pt-BR')}
                   </td>
+                  {isEditable && userRole === Role.OPERADOR_FUSEX && (
+                    <td className="py-2 px-4 border-b text-center">
+                      {custo.usuarioId === currentUser?.userId ? (
+                        <button
+                          onClick={() => handleDelete(custo.id)}
+                          disabled={deletingId === custo.id}
+                          className="inline-flex items-center p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Deletar custo"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                          {deletingId === custo.id && (
+                            <span className="ml-1 text-xs">...</span>
+                          )}
+                        </button>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
               <tr className="font-bold bg-gray-50">
                 <td className="py-2 px-4 border-t">Total</td>
                 <td className="py-2 px-4 border-t text-right">{formatCurrency(valorTotal)}</td>
-                <td colSpan={2} className="border-t"></td>
+                <td colSpan={isEditable && userRole === Role.OPERADOR_FUSEX ? 3 : 2} className="border-t"></td>
               </tr>
             </tbody>
           </table>
