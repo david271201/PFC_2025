@@ -93,6 +93,8 @@ Agora seu banco local está devidamente configurado e populado.
 
 ## Rodando e utilizando o projeto
 
+### Opção 1: Desenvolvimento local tradicional
+
 Agora com o projeto devidamente configurado, basta executar:
 
 ```
@@ -103,6 +105,45 @@ E o projeto será executado na porta 3000 da máquina.
 Para acessá-lo, basta abrir o navegador e ir para a URL "localhost:3000".
 O banco de dados local pode ser inspecionado tanto por programas como PGAdmin ou DBeaver; ou então através do Prisma Studio, com o comando:
 ```npx prisma studio```
+
+### Opção 2: Usando Docker (Recomendado para produção)
+
+Para rodar a aplicação usando Docker, que facilita o deploy em servidores web:
+
+1. **Construir e iniciar os containers:**
+```bash
+sudo docker-compose up --build
+```
+
+2. **Para rodar em background (modo daemon):**
+```bash
+sudo docker-compose up -d --build
+```
+
+3. **Para parar os containers:**
+```bash
+sudo docker-compose down
+```
+
+4. **Para ver logs da aplicação:**
+```bash
+sudo docker-compose logs -f app
+```
+
+5. **Para popular o banco de dados dentro do container:**
+```bash
+sudo docker-compose exec app npx prisma migrate deploy
+sudo docker-compose exec app npx prisma db push
+sudo docker-compose exec app npx ts-node prisma/scripts/populate/index.ts
+```
+
+A aplicação estará disponível na **porta 80** (http://localhost) e o banco PostgreSQL na porta 5432.
+
+#### Configurações importantes para produção:
+
+- **AUTH_SECRET**: Substitua a chave no `docker-compose.yml` pela sua própria chave gerada com `npx auth secret`
+- **NEXTAUTH_URL**: Altere para o domínio real da sua aplicação em produção
+- **Volumes**: Os volumes estão configurados para desenvolvimento. Para produção, remova o volume de sincronização de código
 
 ## Organização do projeto
 

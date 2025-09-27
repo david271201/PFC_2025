@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # Banco de dados PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: sisrebex-postgres
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: L9HlfOCJQABaMFDL
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sisrebex-network
+    restart: unless-stopped
+
+  # Aplicação Next.js
+  app:
+    build: .
+    container_name: sisrebex-app
+    ports:
+      - "80:80"
+    environment:
+      # Configuração do banco de dados
+      DATABASE_URL: "postgresql://postgres:L9HlfOCJQABaMFDL@postgres:5432/postgres"
+      
+      # Configuração do Auth.js (você deve substituir pela sua chave)
+      AUTH_SECRET: "H8V+LiTIMEBUa96ko5FtzAiuyRMx214zEZ6CLVtmGas="
+      
+      # URL base da aplicação (SUBSTITUA pelo seu domínio real)
+      NEXTAUTH_URL: "http://sirmex.ime.eb.mil.br"
+      
+      # Configuração do Next.js
+      NODE_ENV: development
+      PORT: 80
+    depends_on:
+      - postgres
+    networks:
+      - sisrebex-network
+    restart: unless-stopped
+    volumes:
+      # Para desenvolvimento - sincronizar código em tempo real
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+
+networks:
+  sisrebex-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
