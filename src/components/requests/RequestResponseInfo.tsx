@@ -19,7 +19,7 @@ import modal from '../common/modal';
 const responseFormSchema = z.object({
   procedureCost: z.coerce.number(),
   opmeCost: z.coerce.number(),
-  ticketCost: z.coerce.number().optional(),
+  // ticketCost removido - não há mais interface para esse campo
 });
 
 type ResponseFormDataType = z.infer<typeof responseFormSchema>;
@@ -28,14 +28,13 @@ export default function RequestResponseInfo({
   requestResponse,
 }: {
   requestResponse?: RequestResponse;
-}) {
-  const { handleSubmit, control } = useForm<ResponseFormDataType>({
+}) {  const { handleSubmit, control } = useForm<ResponseFormDataType>({
     resolver: zodResolver(responseFormSchema),
     defaultValues: requestResponse
       ? {
           procedureCost: requestResponse.procedureCost || undefined,
           opmeCost: requestResponse.opmeCost || undefined,
-          ticketCost: requestResponse.ticketCost || undefined,
+          // ticketCost removido - não há mais interface para esse campo
         }
       : {},
   });
@@ -59,12 +58,12 @@ export default function RequestResponseInfo({
   const onSubmit = async (data: ResponseFormDataType) => {
     const formData = new FormData();
     Object.entries({ ...data, files: selectedFiles }).forEach(
-      ([key, value]) => {
-        if (key === 'files') {
+      ([key, value]) => {        if (key === 'files') {
           (value as File[]).forEach((file) => {
             formData.append('files', file);
           });
-        } else if (key !== 'ticketCost') {
+        } else {
+          // ticketCost removido - todos os campos restantes são válidos
           formData.append(key, value.toString());
         }
       },
@@ -128,35 +127,19 @@ export default function RequestResponseInfo({
             value={field.value || 0}
             onChange={field.onChange}
             disabled={!!requestResponse}
-          />
-        )}
+          />      )}
       />
-      {(requestResponse?.ticketCost || requestResponse?.ticketCost === 0) && (
-        <Controller
-          name="ticketCost"
-          control={control}
-          rules={{ required: true }}
-          defaultValue={0}
-          render={({ field }) => (
-            <CurrencyInput
-              label="Custo passagem"
-              value={field.value || 0}
-              onChange={field.onChange}
-              disabled={!!requestResponse}
-            />
-          )}
-        />
-      )}
+      {/* Campo ticketCost removido - não há mais interface para esse campo */}
       {typeof requestResponse?.procedureCost === 'number' &&
         typeof requestResponse?.opmeCost === 'number' && (
           <Input
             value={new Intl.NumberFormat('pt-BR', {
               style: 'currency',
               currency: 'BRL',
-            }).format(
+            }            ).format(
               requestResponse.procedureCost +
-                requestResponse.opmeCost +
-                (requestResponse?.ticketCost || 0)
+                requestResponse.opmeCost
+              // ticketCost removido do cálculo total
             )}
             label="Custo total"
             divClassname="col-span-4 row-start-2"

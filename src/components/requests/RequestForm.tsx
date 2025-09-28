@@ -15,6 +15,7 @@ import {
 import Button from "../common/button";
 import Card from "../common/card";
 import Input, { formatCurrency } from "../common/input";
+import CurrencyInput from "../common/input/CurrencyInput";
 import Select from "../common/select";
 import modal from "../common/modal";
 import { transformToBoolean } from "./RequestInfo";
@@ -32,11 +33,6 @@ const opinionFormSchema = z.object({
       label: z.string(),
     })
     .optional(),
-  ticketCosts: z
-    .array(
-      z.object({ responseId: z.string(), cost: z.coerce.number().optional() })
-    )
-    .optional(),
   selectedResponseId: z.string().optional(),
 });
 
@@ -53,17 +49,11 @@ export default function RequestForm({
 }) {
   const { register, reset, setValue, handleSubmit, getValues, control } =
     useForm<OpinionFormDataType>({
-      resolver: zodResolver(opinionFormSchema),
-      defaultValues: {
+      resolver: zodResolver(opinionFormSchema),      defaultValues: {
         favorable: true,
-        ticketCosts: [],
       },
     });
 
-  const { fields } = useFieldArray({
-    control,
-    name: "ticketCosts",
-  });
 
   const router = useRouter();
   const { requestId } = router.query;
@@ -74,26 +64,9 @@ export default function RequestForm({
     responses &&
     responses.every((item) => terminalStatuses.includes(item.status));
 
-  useEffect(() => {
-    if (responses) {
+  useEffect(() => {    if (responses) {
       reset({
         favorable: true,
-        ticketCosts: responses
-          .filter(
-            (response) =>
-              !(
-                [
-                  RequestStatus.REPROVADO,
-                  RequestStatus.REPROVADO_DSAU,
-                  RequestStatus.CANCELADO,
-                  RequestStatus.APROVADO,
-                ] as RequestStatus[]
-              ).includes(response.status)
-          )
-          .map((response) => ({
-            responseId: response.id,
-            cost: response.ticketCost || undefined,
-          })),
       });
     }
   }, [responses, reset]);
@@ -121,27 +94,10 @@ export default function RequestForm({
     const floatValue = parseFloat(normalizedValue) || 0;
     fieldOnChange(floatValue);
   };
-
   const submitForm = async (
     data: OpinionFormDataType & { cancelUnfinishedResponses?: boolean }
   ) => {
-    if (
-      status === RequestStatus.AGUARDANDO_PASSAGEM &&
-      getValues("ticketCosts")?.some(
-        (ticketCost) => ticketCost.cost === undefined
-      )
-    ) {
-      Swal.fire({
-        title: "Erro",
-        icon: "error",
-        text: "Todos os campos de orçamento devem ser preenchidos",
-        customClass: {
-          confirmButton:
-            "bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro",
-        },
-      });
-      return;
-    }
+    // Validação de ticketCosts removida - não há interface para preenchimento
 
     const formData = new FormData();
     Object.entries({ ...data, files: selectedFiles }).forEach(
@@ -245,7 +201,6 @@ export default function RequestForm({
       onConfirm: cancelRequest,
     });
   };
-
   const submitConfirmation = async (data: OpinionFormDataType) => {
     if (
       status === RequestStatus.AGUARDANDO_RESPOSTA &&
@@ -307,13 +262,12 @@ export default function RequestForm({
                   className="w-full rounded border border-gray-300 px-2 text-grafite focus:outline-0 focus:ring focus:ring-verde"
                   {...register("observation")}
                 />
-              </div>
-            </div>
-          </Card>
-          <div className="mt-3 flex items-center gap-4">
-            <Button type="submit" className="max-w-40">
-              Enviar para o próximo
-            </Button>
+              </div>            </div>            </Card>
+            
+            <div className="mt-3 flex items-center gap-4">
+              <Button type="submit" className="max-w-40">
+                Enviar para o próximo
+              </Button>
             <Button
               color="secondary"
               onClick={handleSubmit(confirmCorrection)}
