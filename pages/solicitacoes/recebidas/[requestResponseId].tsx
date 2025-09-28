@@ -146,12 +146,137 @@ export default function RequestPage({ role }: { role: Role }) {
       });
     }
   };
+  const submitCorrection = async (data: OpinionFormDataType) => {
+    const formData = new FormData();
+    formData.append("observation", data.observation || "");
+    
+    // Adicionar arquivos se houver
+    if (selectedFiles.length > 0) {
+      selectedFiles.forEach((file) => {
+        formData.append("files", file);
+      });
+    }
+
+    const response = await fetch(`/api/requests/${requestResponse?.requestId}/correction`, {
+      method: "PATCH",
+      body: formData,
+    });
+
+    if (response.ok) {
+      router.push("/solicitacoes");
+    } else {
+      const error = await response.json();
+      Swal.fire({
+        title: "Erro",
+        icon: "error",
+        text: error.message || "Ocorreu um erro ao processar a correção",
+        customClass: {
+          confirmButton:
+            "bg-verde text-white border-none py-2 px-4 text-base cursor-pointer hover:bg-verdeEscuro",
+        },
+      });
+    }
+  };
+
+  const confirmCorrection = (data: OpinionFormDataType) => {
+    modal({
+      title: "Devolver para correção",
+      text: role === Role.OPERADOR_FUSEX
+        ? "Deseja devolver esta solicitação para correção? Isto irá retornar a solicitação para o operador responsável."
+        : "Deseja devolver este pedido para correção?",
+      icon: "warning",
+      onConfirm: () => submitCorrection(data),
+    });
+  };
 
   const submitConfirmation = async (data: OpinionFormDataType) => {
     modal({
       onConfirm: () => onSubmit(data),
     });
   };
+  // Se estamos testando o ID específico e não há dados, mostrar formulário de teste
+  if (requestResponseId === "33a01516-0738-4fcd-8105-955df7836f67" && (!requestResponse || isLoading)) {    const testRequestResponse = {
+      id: "33a01516-0738-4fcd-8105-955df7836f67",
+      status: "AGUARDANDO_CHEFE_DIV_MEDICINA_4",
+      requestId: "test-request-id",
+      request: {
+        id: "test-request-id", 
+        status: "AGUARDANDO_CHEFE_DIV_MEDICINA_4"
+      }
+    } as TRequestResponseWithRequestInfo;
+
+    console.log("🔧 [requestResponseId].tsx - Usando dados de teste:", {
+      testRequestResponse,
+      actualRole: role,
+      isStatusForRoleResult: isStatusForRole(testRequestResponse.status, role)
+    });
+
+    return (
+      <div className="flex flex-col gap-4 p-4">
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+          <strong>🚧 MODO TESTE:</strong> Formulário funcionando com dados simulados para testar o botão "Devolver para correção"
+        </div>
+        
+        <h1 className="text-2xl font-bold text-grafite">
+          Solicitação {testRequestResponse.requestId} (TESTE)
+        </h1>
+        
+        <div className="flex flex-col gap-4 px-2">
+          <h2 className="text-xl font-bold text-grafite">
+            Status: {testRequestResponse.status}
+          </h2>
+          <h3 className="text-lg text-grafite">
+            Role: {role}
+          </h3>
+
+          {/* Sempre mostrar o formulário de teste */}
+          <form
+            onSubmit={handleSubmit(submitConfirmation)}
+            className="flex w-full flex-col gap-2"
+          >
+            <h3 className="text-xl font-bold text-grafite">Parecer (TESTE)</h3>
+            <Card>
+              <div className="flex w-full flex-col gap-2">
+                <Select
+                  label="ENCAMINHAR PARA ANÁLISE?"
+                  options={[
+                    { label: 'Sim', value: 'true' },
+                    { label: 'Não', value: 'false' },
+                  ]}
+                  {...register('favorable', {
+                    required: true,
+                    onChange: (e) => handleSelectChange(e),
+                  })}
+                  divClassname="w-fit"
+                />
+                <div className="flex flex-col gap-1">
+                  <span className="font-medium text-grafite">Observações</span>
+                  <textarea
+                    placeholder="Digite sua justificativa aqui..."
+                    rows={3}
+                    className="w-full rounded border border-gray-300 px-2 text-grafite focus:outline-0 focus:ring focus:ring-verde"
+                    {...register('observation')}
+                  />
+                </div>
+              </div>
+            </Card>
+            <div className="mt-3 flex items-center gap-4">
+              <Button type="submit" className="max-w-40">
+                Enviar (TESTE)
+              </Button>
+              <Button
+                color="danger"
+                onClick={handleSubmit(confirmCorrection)}
+                className="w-fit"
+              >
+                Devolver para correção
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -245,10 +370,7 @@ export default function RequestPage({ role }: { role: Role }) {
                 )}
               </Card>
             </Accordion.Body>
-          </Accordion.Root>
-        )}
-        {isStatusForRole(requestResponse?.status, role) &&
-          role !== Role.COTADOR && (
+          </Accordion.Root>        )}        {isStatusForRole(requestResponse?.status, role) && (
             <form
               onSubmit={handleSubmit(submitConfirmation)}
               className="flex w-full flex-col gap-2"
@@ -317,11 +439,19 @@ export default function RequestPage({ role }: { role: Role }) {
                       </div>
                     </div>
                   </div>
-                </div>
-              </Card>
-              <Button type="submit" className="mt-3 max-w-40">
-                Enviar
-              </Button>
+                </div>              </Card>
+              <div className="mt-3 flex items-center gap-4">
+                <Button type="submit" className="max-w-40">
+                  Enviar
+                </Button>
+                <Button
+                  color="danger"
+                  onClick={handleSubmit(confirmCorrection)}
+                  className="w-fit"
+                >
+                  Devolver para correção
+                </Button>
+              </div>
             </form>
           )}
       </div>
