@@ -11,9 +11,7 @@ export default auth((req) => {
 
   if (url.pathname.includes('/api/')) {
     return;
-  }
-
-  if (!isLoggedIn && url.pathname !== '/') {
+  }  if (!isLoggedIn && url.pathname !== '/') {
     url.pathname = '/';
     return NextResponse.redirect(url);
   }
