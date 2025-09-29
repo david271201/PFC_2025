@@ -9,7 +9,6 @@ interface CustoStats {
   totalOPME: number;
   totalPSA: number;
   totalProcedure: number;
-  totalTicket: number;
   totalGeral: number;
   quantidadeSolicitacoes: number;
   custoMedio: number;
@@ -22,7 +21,6 @@ interface CustoStatsData {
     totalOPME: number;
     totalPSA: number;
     totalProcedure: number;
-    totalTicket: number;
     totalGeral: number;
     quantidadeSolicitacoes: number;
     custoMedio: number;
@@ -114,34 +112,28 @@ export default function CustoStatsTable({ filters, isPrinting }: CustoStatsTable
           {/* Resumo Geral */}
           <div className="bg-verde/10 p-4 rounded-lg">
             <h4 className="font-semibold text-grafite mb-4">Resumo Geral das Solicitações</h4>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center mb-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mb-4">
               <div>
                 <p className="text-lg font-bold text-blue-600">
-                  {formatCurrency(data.resumoGeral.totalOPME, true)}
+                  {formatCurrency(data.resumoGeral.totalOPME)}
                 </p>
                 <p className="text-xs text-gray-600">OPME</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-purple-600">
-                  {formatCurrency(data.resumoGeral.totalPSA, true)}
+                  {formatCurrency(data.resumoGeral.totalPSA)}
                 </p>
                 <p className="text-xs text-gray-600">PSA</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-orange-600">
-                  {formatCurrency(data.resumoGeral.totalProcedure, true)}
+                  {formatCurrency(data.resumoGeral.totalProcedure)}
                 </p>
                 <p className="text-xs text-gray-600">Procedimentos</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-indigo-600">
-                  {formatCurrency(data.resumoGeral.totalTicket, true)}
-                </p>
-                <p className="text-xs text-gray-600">Passagens</p>
-              </div>
-              <div>
                 <p className="text-lg font-bold text-verde">
-                  {formatCurrency(data.resumoGeral.totalGeral, true)}
+                  {formatCurrency(data.resumoGeral.totalGeral)}
                 </p>
                 <p className="text-xs text-gray-600">Total Geral</p>
               </div>
@@ -155,7 +147,7 @@ export default function CustoStatsTable({ filters, isPrinting }: CustoStatsTable
               </div>
               <div>
                 <p className="text-2xl font-bold text-verde">
-                  {formatCurrency(data.resumoGeral.custoMedio, true)}
+                  {formatCurrency(data.resumoGeral.custoMedio)}
                 </p>
                 <p className="text-sm text-gray-600">Custo Médio por Solicitação</p>
               </div>
@@ -182,9 +174,6 @@ export default function CustoStatsTable({ filters, isPrinting }: CustoStatsTable
                       Procedimentos
                     </th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Passagens
-                    </th>
-                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Total
                     </th>
                     <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -203,31 +192,28 @@ export default function CustoStatsTable({ filters, isPrinting }: CustoStatsTable
                           {rm.name}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-blue-600 text-right">
-                          {formatCurrency(rm.totalOPME, true)}
+                          {formatCurrency(rm.totalOPME)}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-purple-600 text-right">
-                          {formatCurrency(rm.totalPSA, true)}
+                          {formatCurrency(rm.totalPSA)}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-orange-600 text-right">
-                          {formatCurrency(rm.totalProcedure, true)}
-                        </td>
-                        <td className="px-3 py-4 whitespace-nowrap text-sm text-indigo-600 text-right">
-                          {formatCurrency(rm.totalTicket, true)}
+                          {formatCurrency(rm.totalProcedure)}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-semibold">
-                          {formatCurrency(rm.totalGeral, true)}
+                          {formatCurrency(rm.totalGeral)}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                           {rm.quantidadeSolicitacoes}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm font-bold text-verde text-right">
-                          {formatCurrency(rm.custoMedio, true)}
+                          {formatCurrency(rm.custoMedio)}
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                         Nenhum dado encontrado para o período selecionado
                       </td>
                     </tr>
@@ -260,9 +246,6 @@ export default function CustoStatsTable({ filters, isPrinting }: CustoStatsTable
                       Proc.
                     </th>
                     <th className="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Pass.
-                    </th>
-                    <th className="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Total
                     </th>
                     <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -284,31 +267,28 @@ export default function CustoStatsTable({ filters, isPrinting }: CustoStatsTable
                           {om.regionName}
                         </td>
                         <td className="px-2 py-4 whitespace-nowrap text-xs text-blue-600 text-right">
-                          {formatCurrency(om.totalOPME, true)}
+                          {formatCurrency(om.totalOPME)}
                         </td>
                         <td className="px-2 py-4 whitespace-nowrap text-xs text-purple-600 text-right">
-                          {formatCurrency(om.totalPSA, true)}
+                          {formatCurrency(om.totalPSA)}
                         </td>
                         <td className="px-2 py-4 whitespace-nowrap text-xs text-orange-600 text-right">
-                          {formatCurrency(om.totalProcedure, true)}
-                        </td>
-                        <td className="px-2 py-4 whitespace-nowrap text-xs text-indigo-600 text-right">
-                          {formatCurrency(om.totalTicket, true)}
+                          {formatCurrency(om.totalProcedure)}
                         </td>
                         <td className="px-2 py-4 whitespace-nowrap text-xs text-gray-900 text-right font-semibold">
-                          {formatCurrency(om.totalGeral, true)}
+                          {formatCurrency(om.totalGeral)}
                         </td>
                         <td className="px-2 py-4 whitespace-nowrap text-xs text-gray-500 text-center">
                           {om.quantidadeSolicitacoes}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm font-bold text-verde text-right">
-                          {formatCurrency(om.custoMedio, true)}
+                          {formatCurrency(om.custoMedio)}
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                         Nenhum dado encontrado para o período selecionado
                       </td>
                     </tr>
