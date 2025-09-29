@@ -269,7 +269,6 @@ const PacientesPage = () => {
   }
 
   return (
-    <Layout>
       <div className="container mx-auto p-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Gerenciamento de Pacientes</h1>
         
@@ -536,7 +535,6 @@ const PacientesPage = () => {
           </div>
         )}
       </div>
-    </Layout>
   );
 };
 
