@@ -32,9 +32,9 @@ export default async function handle(
 
     let whereClause: any = {
       receiverId: dbUser?.organizationId || '',
-    };
-
-    if (filter === 'sent') {
+    };    if (filter === 'sent') {
+      // Para respostas enviadas, mostra todas onde o usuário teve uma ação registrada
+      // independente do status atual (pois pode ser que ainda esteja aguardando outro papel)
       whereClause = {
         ...whereClause,
         actions: {
@@ -42,18 +42,11 @@ export default async function handle(
             userId,
           },
         },
-        // Para respostas enviadas, excluímos aquelas que estão aguardando ação do usuário atual
-        status: {
-          not: {
-            in: Object.entries(statusTransitions)
-                  .filter(([_, transition]) => transition?.requiredRole === role)
-                  .map(([status]) => status as RequestStatus)
-                  .concat([RequestStatus.NECESSITA_CORRECAO])
-          }
-        }
-      };
-    } else {
+        // Removemos a exclusão por status, pois se o usuário agiu, deve aparecer em "enviadas"
+        // mesmo que o status atual ainda requeira ação deste papel (para casos de múltiplas aprovações)
+      };    } else {
       // Para respostas pendentes, incluímos apenas aquelas que precisam da ação do usuário atual
+      // MAS excluímos aquelas onde o usuário JÁ AGIU (tem actions registradas)
       whereClause = {
         ...whereClause,
         OR: [
@@ -62,10 +55,26 @@ export default async function handle(
               in: Object.entries(statusTransitions)
                     .filter(([_, transition]) => transition?.requiredRole === role)
                     .map(([status]) => status as RequestStatus)
+            },
+            // CORREÇÃO: Excluir responses onde o usuário já agiu
+            NOT: {
+              actions: {
+                some: {
+                  userId
+                }
+              }
             }
           },
           {
-            status: RequestStatus.NECESSITA_CORRECAO
+            status: RequestStatus.NECESSITA_CORRECAO,
+            // CORREÇÃO: Excluir responses onde o usuário já agiu
+            NOT: {
+              actions: {
+                some: {
+                  userId
+                }
+              }
+            }
           }
         ]
       };

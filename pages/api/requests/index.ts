@@ -53,15 +53,33 @@ export default async function handle(
       whereClause = {
         senderId: dbUser.organizationId,
       };
-    }    if (filter === 'sent') {
+    }
+
+    if (filter === 'sent') {
       whereClause = {
         ...whereClause,
-        // Para solicitações enviadas: onde o usuário já agiu
-        actions: {
-          some: {
-            userId,
+        OR: [
+          {
+            actions: {
+              some: {
+                userId,
+              },
+            },
+            // Para solicitações enviadas, excluímos aquelas que estão aguardando ação do usuário atual
+            status: {
+              not: {
+                in: Object.entries(statusTransitions)
+                      .filter(([_, transition]) => transition?.requiredRole === role)
+                      .map(([status]) => status as RequestStatus)
+              }
+            }
           },
-        }
+          // Incluir solicitações que necessitam correção nas enviadas para o OPERADOR_FUSEX
+          ...(role === 'OPERADOR_FUSEX' ? [{
+            status: RequestStatus.NECESSITA_CORRECAO,
+            senderId: dbUser.organizationId
+          }] : [])
+        ]
       };
     } else {
       // Tratamento especial para CHEFE_SECAO_REGIONAL_3
