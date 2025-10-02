@@ -4,6 +4,7 @@ import {
   statusTransitions,
   terminalStatuses,
   UserType,
+  getNextStatusAfterChem2,
 } from "@/permissions/utils";
 import { auth } from "../../../../auth";
 import prisma from "../../../../prisma/prismaClient";
@@ -99,7 +100,6 @@ export default async function handle(
   if (!session?.user || !role) {
     return res.status(401).json({ message: "Usuário não autenticado" });
   }
-
   const request = await prisma.request.findUnique({
     where: {
       id: requestId as string,
@@ -107,6 +107,7 @@ export default async function handle(
     select: {
       id: true,
       status: true,
+      senderId: true,
       requestedOrganizationIds: true,
       sender: {
         select: {
@@ -325,13 +326,36 @@ export default async function handle(
           )
         ),
         ...promises,
-      ]);
+      ]);      return res.status(200).json(undefined);
+    }
 
-      return res.status(200).json(undefined);
-    }    // Tratamento para CHEM_2 - apenas para configurar a response correta quando vai para CHEFE_DIV_MEDICINA_4
-    if (request.status === RequestStatus.AGUARDANDO_CHEM_2 && nextStatus === RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4) {
-      // Em vez de buscar na região do remetente, devemos usar as organizações de destino (requestedOrganizationIds)
-      if (request.requestedOrganizationIds && request.requestedOrganizationIds.length > 0) {
+    // Para CHEM_2, determinar o próximo status baseado na comparação das regiões militares
+    if (request.status === RequestStatus.AGUARDANDO_CHEM_2) {
+      // Buscar as organizações de destino para obter suas regiões
+      const destinationOrganizations = await prisma.organization.findMany({
+        where: {
+          id: {
+            in: request.requestedOrganizationIds,
+          },
+        },
+        select: {
+          id: true,
+          regionId: true,
+        },
+      });
+      
+      const destinationRegionIds = destinationOrganizations.map(org => org.regionId);
+      
+      // Usar a função helper para determinar o próximo status
+      nextStatus = getNextStatusAfterChem2(request.sender.regionId, destinationRegionIds);
+      
+      console.log(`CHEM_2 Decision: Origin RM=${request.sender.regionId}, Destination RMs=[${destinationRegionIds.join(', ')}] -> Next Status: ${nextStatus}`);
+    }
+
+    // Tratamento para CHEM_2 - configurar a response correta baseado no próximo status determinado
+    if (request.status === RequestStatus.AGUARDANDO_CHEM_2) {
+      // Se o próximo status é CHEFE_DIV_MEDICINA_4 (RM iguais), configurar organizações de destino
+      if (nextStatus === RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4 && request.requestedOrganizationIds && request.requestedOrganizationIds.length > 0) {
         console.log('Configurando resposta para CHEFE_DIV_MEDICINA_4 nas organizações de destino:', request.requestedOrganizationIds);
         
         // Buscar as organizações de destino que tenham usuários CHEFE_DIV_MEDICINA
@@ -413,18 +437,27 @@ export default async function handle(
             },
           });
           
-          console.log(`Solicitação ${requestId} configurada para aparecer apenas para CHEFE_DIV_MEDICINA da organização ${destinationOrg.name}`);
-        } else {
+          console.log(`Solicitação ${requestId} configurada para aparecer apenas para CHEFE_DIV_MEDICINA da organização ${destinationOrg.name}`);        } else {
           console.log('Nenhuma organização de destino possui usuários CHEFE_DIV_MEDICINA:', request.requestedOrganizationIds);
           
           // Fallback: se nenhuma organização de destino tem CHEFE_DIV_MEDICINA,
-          // ainda precisamos criar uma resposta para evitar erro no fluxo
-          const firstDestinationOrgId = request.requestedOrganizationIds[0];
+          // priorizar organizações de destino que NÃO sejam a organização remetente
+          const destinationOrgsExcludingSender = request.requestedOrganizationIds.filter(
+            orgId => orgId !== request.senderId
+          );
+          
+          // Se houver organizações de destino diferentes da remetente, usar a primeira
+          // Caso contrário, usar a primeira da lista original (cenário raro onde só há a org remetente)
+          const targetOrgId = destinationOrgsExcludingSender.length > 0 
+            ? destinationOrgsExcludingSender[0] 
+            : request.requestedOrganizationIds[0];
+          
+          console.log(`Fallback: Usando organização ${targetOrgId} (remetente: ${request.senderId})`);
           
           let fallbackResponse = await prisma.requestResponse.findFirst({
             where: {
               requestId: requestId as string,
-              receiverId: firstDestinationOrgId,
+              receiverId: targetOrgId,
             },
           });
           
@@ -432,7 +465,7 @@ export default async function handle(
             fallbackResponse = await prisma.requestResponse.create({
               data: {
                 requestId: requestId as string,
-                receiverId: firstDestinationOrgId,
+                receiverId: targetOrgId,
                 selected: false,
                 status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
               },
@@ -449,7 +482,7 @@ export default async function handle(
             },
           });
           
-          // Marcar apenas a resposta da primeira organização de destino
+          // Marcar apenas a resposta da organização de destino (não remetente)
           await prisma.requestResponse.update({
             where: { id: fallbackResponse.id },
             data: { 
@@ -458,17 +491,26 @@ export default async function handle(
             },
           });
           
-          console.log(`Fallback: Solicitação ${requestId} configurada para a primeira organização de destino`);
+          // Buscar o nome da organização para logging
+          const targetOrg = await prisma.organization.findUnique({
+            where: { id: targetOrgId },
+            select: { name: true }
+          });
+          
+          console.log(`Fallback: Solicitação ${requestId} configurada para organização ${targetOrg?.name || 'desconhecida'} (${targetOrgId})`);
         }
+      } else if (nextStatus === RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_1) {
+        // Se vai para o fluxo DSAU (RM diferentes), não precisa configurar organizações específicas
+        console.log('CHEM_2: Direcionando para fluxo DSAU (RM diferentes)');
       } else {
         console.log('Solicitação não possui organizações de destino definidas (requestedOrganizationIds vazio)');
       }
     }
-    
-    // Para CHEFE_SECAO_REGIONAL_3, sempre direcionar para SUBDIRETOR_SAUDE_1
+
+    // Para CHEFE_SECAO_REGIONAL_3, sempre direcionar para AGUARDANDO_OPERADOR_FUSEX_REALIZACAO (RM iguais)
     if (request.status === RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3) {
-      // Definimos o próximo status diretamente
-      nextStatus = RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_1;
+      // Definimos o próximo status diretamente para operador FUSEX (realização)
+      nextStatus = RequestStatus.AGUARDANDO_OPERADOR_FUSEX_REALIZACAO;
     }
 
     await prisma.$transaction(async (tx) => {
@@ -511,14 +553,15 @@ export default async function handle(
           status: nextStatus as RequestStatus,
         },
       });
-      
-      // Se estamos atualizando para um status de AGUARDANDO_CHEFE_DIV_MEDICINA_4, atualizar também
-      // todas as respostas selecionadas para o mesmo status
+        // Se estamos atualizando para um status de AGUARDANDO_CHEFE_DIV_MEDICINA_4, atualizar TODAS
+      // as respostas para o mesmo status (não apenas as selecionadas), pois elas precisam
+      // refletir o novo estado da solicitação
       if (nextStatus === RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4) {
+        console.log(`🔧 Atualizando TODAS as responses para status AGUARDANDO_CHEFE_DIV_MEDICINA_4 (Request: ${requestId})`);
+        
         await tx.requestResponse.updateMany({
           where: {
-            requestId: requestId as string,
-            selected: true
+            requestId: requestId as string
           },
           data: {
             status: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4

@@ -117,14 +117,13 @@ export default async function handler(
           ticketCostResponse += response.ticketCost || 0;
         });
 
-        // Total por solicitação
-        const totalSolicitacao = opmeCostRequest + psaCostRequest + opmeCostResponse + procedureCostResponse + ticketCostResponse;
+        // Total por solicitação (removendo custos de passagem)
+        const totalSolicitacao = opmeCostRequest + psaCostRequest + opmeCostResponse + procedureCostResponse;
 
-        // Atualizar totais gerais
+        // Atualizar totais gerais (removendo custos de passagem)
         totalGeralOPME += opmeCostRequest + opmeCostResponse;
         totalGeralPSA += psaCostRequest;
         totalGeralProcedure += procedureCostResponse;
-        totalGeralTicket += ticketCostResponse;
         quantidadeTotal++;
 
         // Agrupar por RM

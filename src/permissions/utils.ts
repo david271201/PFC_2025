@@ -19,6 +19,23 @@ export function checkPermission(
   return permissionsByRole[role].has(permission);
 }
 
+// Função helper para determinar o próximo status após CHEM_2 baseado na comparação das regiões militares
+export function getNextStatusAfterChem2(
+  originRegionId: string,
+  destinationRegionIds: string[]
+): RequestStatus {
+  // Se as regiões são iguais (mesma RM), vai direto para os formulários
+  const sameRegion = destinationRegionIds.some(destRegion => destRegion === originRegionId);
+  
+  if (sameRegion) {
+    // Caso 1: RM iguais - vai direto para CHEFE_DIV_MEDICINA_4 (relatórios)
+    return RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4;
+  } else {
+    // Caso 2: RM diferentes - vai para o fluxo DSAU (SUBDIRETOR_SAUDE_1)
+    return RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_1;
+  }
+}
+
 export const terminalStatuses: RequestStatus[] = [
   RequestStatus.APROVADO,
   RequestStatus.REPROVADO,
@@ -155,30 +172,29 @@ export const statusTransitions: Record<
     nextStatus: RequestStatus.AGUARDANDO_CHEM_2,
     previousStatus: RequestStatus.AGUARDANDO_OPERADOR_SECAO_REGIONAL,
     requiredRole: Role.CHEFE_SECAO_REGIONAL,
-  },
-  // [RequestStatus.AGUARDANDO_CHEM_2]: {
-  //   nextStatus: RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_1,
-  //   previousStatus: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_2,
-  //   requiredRole: Role.CHEM,
-  // },
-  [RequestStatus.AGUARDANDO_CHEM_2]: {
-    nextStatus: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
+  },  [RequestStatus.AGUARDANDO_CHEM_2]: {
+    // O próximo status será determinado dinamicamente pela função getNextStatusAfterChem2
+    // baseado na comparação das regiões militares
+    nextStatus: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4, // Padrão para RM iguais
     previousStatus: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_2,
     requiredRole: Role.CHEM,
   },
+  
+  // CASO 1: RM IGUAIS - Fluxo direto para formulários
   [RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4]: {
     nextStatus: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3,
     previousStatus: RequestStatus.AGUARDANDO_CHEM_2,
     requiredRole: Role.CHEFE_DIV_MEDICINA,
   },
   [RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3]: {
-    nextStatus: RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_1,
+    // Para RM iguais: vai direto para operador FUSEX (realização)
+    nextStatus: RequestStatus.AGUARDANDO_OPERADOR_FUSEX_REALIZACAO,
     previousStatus: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
     requiredRole: Role.CHEFE_SECAO_REGIONAL,
-  },
+  },  // CASO 2: RM DIFERENTES - Fluxo DSAU completo
   [RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_1]: {
     nextStatus: RequestStatus.AGUARDANDO_DRAS,
-    previousStatus: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3,
+    previousStatus: RequestStatus.AGUARDANDO_CHEM_2, // Vem direto do CHEM_2 para RM diferentes
     requiredRole: Role.SUBDIRETOR_SAUDE,
   },
   [RequestStatus.AGUARDANDO_DRAS]: {
@@ -187,13 +203,13 @@ export const statusTransitions: Record<
     requiredRole: Role.DRAS,
   },
   [RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_2]: {
-    nextStatus: RequestStatus.AGUARDANDO_OPERADOR_FUSEX_REALIZACAO,
+    // Para RM diferentes: após DSAU, vai para formulários
+    nextStatus: RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4,
     previousStatus: RequestStatus.AGUARDANDO_DRAS,
     requiredRole: Role.SUBDIRETOR_SAUDE,
-  },
-  [RequestStatus.AGUARDANDO_OPERADOR_FUSEX_REALIZACAO]: {
+  },  [RequestStatus.AGUARDANDO_OPERADOR_FUSEX_REALIZACAO]: {
     nextStatus: RequestStatus.AGUARDANDO_OPERADOR_FUSEX_CUSTOS,
-    previousStatus: RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_2,
+    previousStatus: RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3,
     requiredRole: Role.OPERADOR_FUSEX,
   },
   [RequestStatus.AGUARDANDO_OPERADOR_FUSEX_CUSTOS]: {

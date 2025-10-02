@@ -37,11 +37,30 @@ export default async function handle(
       return res.status(403).json({ message: 'Usuário não autorizado' });
     }
 
-    const { filter } = req.query;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { filter } = req.query;    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let whereClause: any = {};
-
-    if (dbUser.regionId && dbUser.regionId !== 'dsau') {
+      // Lógica especial para papéis que devem ver solicitações baseado na região das organizações solicitadas:
+    // - CHEM: sempre usa região de destino
+    // - CHEFE_SECAO_REGIONAL: APENAS para status 1 e 2 (não para status 3 que tem lógica própria)  
+    // - OPERADOR_SECAO_REGIONAL: sempre usa região de destino
+    if ((role === 'CHEM' || role === 'OPERADOR_SECAO_REGIONAL' || (role === 'CHEFE_SECAO_REGIONAL' && !dbUser.organizationId)) && dbUser.regionId && dbUser.regionId !== 'dsau') {
+      // Para CHEM, OPERADOR_SECAO_REGIONAL e CHEFE_SECAO_REGIONAL (status 1 e 2), filtrar por solicitações onde as organizações de destino sejam da mesma região
+      const organizationsInRegion = await prisma.organization.findMany({
+        where: { regionId: dbUser.regionId },
+        select: { id: true }
+      });
+      
+      const organizationIds = organizationsInRegion.map(org => org.id);
+      
+      whereClause = {
+        requestedOrganizationIds: {
+          hasSome: organizationIds, // Pelo menos uma organização solicitada deve ser da região
+        },
+      };
+      
+      console.log(`${role} Filter: Região ${dbUser.regionId}, organizações: [${organizationIds.join(', ')}]`);
+    } else if (dbUser.regionId && dbUser.regionId !== 'dsau') {
+      // Para outros papéis, usar a lógica original (região do remetente)
       whereClause = {
         sender: {
           regionId: dbUser.regionId,
@@ -154,9 +173,7 @@ export default async function handle(
               status: RequestStatus.NECESSITA_CORRECAO
             }
           } : {})
-        };
-        
-        // Log para CHEFE_DIV_MEDICINA para debug
+        };        // Log para CHEFE_DIV_MEDICINA para debug
         if (role === 'CHEFE_DIV_MEDICINA') {
           console.log("Usando lógica padrão para CHEFE_DIV_MEDICINA - whereClause:", JSON.stringify(whereClause, null, 2));
         }
@@ -165,10 +182,15 @@ export default async function handle(
 
     // Adicionar campos para depuração em ambientes de desenvolvimento
     const isDevEnv = process.env.NODE_ENV === 'development';
-    
-    const requests = await prisma.request.findMany({
+      const requests = await prisma.request.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        status: true,
+        pacientCpf: true,
+        senderId: true,
+        requestedOrganizationIds: true,
+        updatedAt: true,
         sender: {
           select: {
             id: true,
@@ -195,9 +217,7 @@ export default async function handle(
       orderBy: {
         updatedAt: 'desc',
       },
-    });
-    
-    // Log para ajudar na depuração
+    });    // Log para ajudar na depuração
     if (isDevEnv && role === 'CHEFE_DIV_MEDICINA') {
       console.log(`Solicitações para CHEFE_DIV_MEDICINA (org ${dbUser.organizationId}):`);
       requests.forEach(req => {

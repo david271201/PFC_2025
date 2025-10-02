@@ -44,9 +44,9 @@ export default async function handle(
         },
         // Removemos a exclusão por status, pois se o usuário agiu, deve aparecer em "enviadas"
         // mesmo que o status atual ainda requeira ação deste papel (para casos de múltiplas aprovações)
-      };    } else {
+      };
+    } else {
       // Para respostas pendentes, incluímos apenas aquelas que precisam da ação do usuário atual
-      // MAS excluímos aquelas onde o usuário JÁ AGIU (tem actions registradas)
       whereClause = {
         ...whereClause,
         OR: [
@@ -55,30 +55,13 @@ export default async function handle(
               in: Object.entries(statusTransitions)
                     .filter(([_, transition]) => transition?.requiredRole === role)
                     .map(([status]) => status as RequestStatus)
-            },
-            // CORREÇÃO: Excluir responses onde o usuário já agiu
-            NOT: {
-              actions: {
-                some: {
-                  userId
-                }
-              }
             }
           },
           {
-            status: RequestStatus.NECESSITA_CORRECAO,
-            // CORREÇÃO: Excluir responses onde o usuário já agiu
-            NOT: {
-              actions: {
-                some: {
-                  userId
-                }
-              }
-            }
+            status: RequestStatus.NECESSITA_CORRECAO
           }
         ]
-      };
-    }
+      };    }
 
     const requestResponses = await prisma.requestResponse.findMany({
       where: whereClause,
@@ -96,9 +79,7 @@ export default async function handle(
       orderBy: {
         updatedAt: 'asc',
       },
-    });
-
-    return res.status(200).json(requestResponses);
+    });    return res.status(200).json(requestResponses);
   }
 
   if (req.method === 'POST') {
