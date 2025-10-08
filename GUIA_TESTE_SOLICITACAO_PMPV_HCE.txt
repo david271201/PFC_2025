@@ -1,0 +1,114 @@
+GUIA PARA TESTE DE SOLICITAÇÃO: PMPV → HCE
+==============================================
+
+OBJETIVO: Testar uma solicitação de evacuação médica da PMPV 
+para o HCE (Hospital Central do Exército - Destinatário)
+
+FLUXO COMPLETO DE USUÁRIOS E SEQUÊNCIA DE APROVAÇÕES:
+
+Está senha é a mesma para todos os usuários
+SENHA:admin
+====================================================
+
+FASE 1: CRIAÇÃO E APROVAÇÃO INICIAL (LADO PMPV - REMETENTE)
+----------------------------------------------------------
+
+1. OPERADOR_FUSEX (PMPV)
+   Email: operadorfusex@pmpv.com
+
+2. CHEFE_FUSEX (PMPV) 
+   Email: chefefusex@pmpv.com
+   
+3. CHEFE_AUDITORIA (pmpv)
+   Email: chefeauditoria@pmpv.com
+
+4. AUDITOR (pmpv)
+   Email: auditor@pmpv.com
+   
+5. CHEFE_AUDITORIA (pmpv)
+   Email: chefeauditoria@pmpv.com
+   
+6. CHEFE_FUSEX (PMPV)
+   Email: chefefusex@pmpv.com
+   
+7. HOMOLOGADOR (PMPV)
+   Email: homologador@pmpv.com
+   Ação: Homologar e enviar para as organizações destinatárias
+
+FASE 2: PROCESSAMENTO NO DESTINO (LADO HCE - DESTINATÁRIO)
+---------------------------------------------------------
+
+8. HOMOLOGADOR (HCE - Lado Destinatário)
+   Email: homologador@hce.com
+   
+9. CHEFE_DIV_MEDICINA (HCE)
+   Email: chefedivmedicina@hce.com
+
+10. ESPECIALISTA (HCE)
+    Email: especialista@hce.com
+
+11. CHEFE_DIV_MEDICINA (HCE)
+    Email: chefedivmedicina@hce.com
+
+12. COTADOR (HCE)
+    Email: cotador@hce.com
+    
+13. CHEFE_DIV_MEDICINA (HCE) - Terceira avaliação
+    Email: chefedivmedicina@hce.com
+    
+14. HOMOLOGADOR (HCE) - Aprovação final no destinatário
+    Email: homologador@hce.com
+    
+FASE 3: RETORNO (VOLTA PARA PMPV)
+------------------------------------------------------
+
+15. HOMOLOGADOR (PMPV)
+    Email: homologador@pmpv.com
+
+16. CHEFE_FUSEX (PMPV)
+    Email: chefefusex@pmpv.com
+
+17. OPERADOR_FUSEX (PMPV)
+    Email: operadorfusex@pmpv.com
+
+18. CHEFE_FUSEX (PMPV)
+    Email: chefefusex@pmpv.com
+
+19. HOMOLOGADOR (PMPV)
+    Email: homologador@pmpv.com
+
+20. CHEM (RM)
+    Email: chem@1rm.com
+    
+21. CHEFE_SECAO_REGIONAL (RM)
+    Email: chefesecao_regional@1rm.com
+
+22. OPERADOR_SECAO_REGIONAL (RM)
+    Email: operadorsecao_regional@1rm.com
+    
+23. CHEFE_SECAO_REGIONAL (RM)
+    Email: chefesecao_regional@1rm.com
+    
+24. CHEM (RM)
+    Email: chem@1rm.com
+    
+25. CHEFE_DIV_MEDICINA (HCE)
+    Email: chefedivmedicina@hce.com
+    
+26. CHEFE_SECAO_REGIONAL (RM)
+    Email: chefesecaoregional@1rm.com
+    
+27. SUBDIRETOR_SAUDE (DSAU)
+    Email: subdiretorsaude@dsau.com
+    
+28. DRAS (DSAU)
+    Email: dras@dsau.com
+
+29. SUBDIRETOR_SAUDE (DSAU)
+    Email: subdiretorsaude@dsau.com
+    
+30. OPERADOR_FUSEX (PMPV)
+    Email: operadorfusex@pmpv.com
+    
+31. OPERADOR_FUSEX (PMPV)
+    Email: operador.fusex@pmpv.com

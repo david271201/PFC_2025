@@ -63,6 +63,13 @@ enum ActionType {
   CANCELAMENTO
 }
 
+enum TipoTransporte {
+  UTI
+  RODOVIARIO
+  AEREO
+  AEROMEDICA
+}
+
 enum Role {
   SUPERADMIN
   OPERADOR_FUSEX
@@ -161,6 +168,8 @@ model Request {
   formulariosRegistrados   FormularioMedico[]
   formulariosChefeDivMed4 FormularioMedicoChefeDiv4[]
   custos                  Custo[]
+  valorPassagem           Float?
+  tipoTransporte          TipoTransporte?
 }
 
 model RequestResponse {

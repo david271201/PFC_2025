@@ -1,6 +1,7 @@
 import Card from '@/components/common/card';
 import SpinLoading from '@/components/common/loading/SpinLoading';
 import RequestInfo from '@/components/requests/RequestInfo';
+import TransportForm from '@/components/transport/TransportForm';
 import fetcher from '@/fetcher';
 import { checkPermission, UserType } from '@/permissions/utils';
 import { auth } from '@@/auth';
@@ -138,6 +139,27 @@ export default function RequestPage({ role }: { role: Role }) {
             status={request?.status}
             responses={responses}
             userRole={role}
+          />
+        )}
+
+        {/* Componente de Dados de Passagem - aparece para Operador FUSEX no status AGUARDANDO_PASSAGEM ou para visualização após preenchido */}
+        {request?.status === RequestStatus.AGUARDANDO_PASSAGEM && role === Role.OPERADOR_FUSEX && (
+          <TransportForm
+            requestId={requestId as string}
+            userRole={role}
+            existingValorPassagem={request.valorPassagem as number | undefined}
+            existingTipoTransporte={request.tipoTransporte as any}
+          />
+        )}
+        
+        {/* Mostrar os dados de passagem preenchidos para visualização em outros status */}
+        {request?.status !== RequestStatus.AGUARDANDO_PASSAGEM && (request?.valorPassagem || request?.tipoTransporte) && (
+          <TransportForm
+            requestId={requestId as string}
+            userRole={role}
+            existingValorPassagem={request.valorPassagem as number | undefined}
+            existingTipoTransporte={request.tipoTransporte as any}
+            isReadOnly={true}
           />
         )}
         
