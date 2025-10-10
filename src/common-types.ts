@@ -23,6 +23,7 @@ export type TRequestInfo = Request & {
     name: string;
   }[];
   requestActions: TActionLogWithUserInfo[];
+  tokenSequencial?: string; // Token sequencial gerado na aprovação
 };
 
 export type TRequestResponseWithReceiver = RequestResponse & {

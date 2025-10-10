@@ -15,6 +15,7 @@ function TableRow({
     sender: { name: string };
     updatedAt: Date;
     createdAt: Date;
+    tokenSequencial?: string;
   };
   isResponse?: boolean;
 }) {
@@ -49,11 +50,21 @@ function TableRow({
           style={{ cursor: 'pointer' }}
           className="whitespace-nowrap border-x-0 border-t-0 p-4 px-6 align-middle text-xs">
         {request.pacientCpf}
+      </td>      <td onClick={() => router.push(isResponse ? `/solicitacoes/recebidas/${request.id}` : `/solicitacoes/${request.id}`)}
+          style={{ cursor: 'pointer' }}
+          className="whitespace-nowrap border-x-0 border-t-0 p-4 px-6 align-middle text-xs">
+        {request.sender.name}
       </td>
       <td onClick={() => router.push(isResponse ? `/solicitacoes/recebidas/${request.id}` : `/solicitacoes/${request.id}`)}
           style={{ cursor: 'pointer' }}
           className="whitespace-nowrap border-x-0 border-t-0 p-4 px-6 align-middle text-xs">
-        {request.sender.name}
+        {request.tokenSequencial ? (
+          <span className="bg-verde/10 text-verde px-2 py-1 rounded text-xs font-mono font-medium">
+            {request.tokenSequencial}
+          </span>
+        ) : (
+          <span className="text-gray-400 text-xs">-</span>
+        )}
       </td>
       <td onClick={() => router.push(isResponse ? `/solicitacoes/recebidas/${request.id}` : `/solicitacoes/${request.id}`)}
           style={{ cursor: 'pointer' }}

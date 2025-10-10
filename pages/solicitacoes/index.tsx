@@ -16,19 +16,19 @@ export default function RequestsListPage({ role }: { role: Role }) {
 
   const [cpf, setCpf] = useState('');
   const [filteredRequests, setFilteredRequests] = useState<any[] | null>(null);
-
   const { data: requests, isLoading } = useSWR<
     (Request & {
       sender: { name: string };
+      tokenSequencial?: string;
     })[]
   >(`/api/requests?filter=${type || 'received'}`, fetcher, {
     revalidateOnFocus: false,
   });
-
   const { data: requestResponses, isLoading: isLoadingResponses } = useSWR<
     (RequestResponse & {
       request: Request & {
         sender: { name: string };
+        tokenSequencial?: string;
       };
     })[]
   >(`/api/responses?filter=${type || 'received'}`, fetcher, {
@@ -48,6 +48,7 @@ export default function RequestsListPage({ role }: { role: Role }) {
       },
       updatedAt: response.updatedAt,
       isResponse: true,
+      tokenSequencial: response.request.tokenSequencial, // Inclui o token da solicitação
     })) || [];
 
   const allRequests: any[] = [
@@ -139,9 +140,11 @@ export default function RequestsListPage({ role }: { role: Role }) {
                   </th>
                   <th className="whitespace-nowrap border border-x-0 border-solid px-6 py-3 text-left align-middle text-xs font-bold uppercase">
                     Paciente
+                  </th>                  <th className="whitespace-nowrap border border-x-0 border-solid px-6 py-3 text-left align-middle text-xs font-bold uppercase">
+                    Solicitante
                   </th>
                   <th className="whitespace-nowrap border border-x-0 border-solid px-6 py-3 text-left align-middle text-xs font-bold uppercase">
-                    Solicitante
+                    Token
                   </th>
                   <th className="whitespace-nowrap border border-x-0 border-solid px-6 py-3 text-left align-middle text-xs font-bold uppercase">
                     Tempo

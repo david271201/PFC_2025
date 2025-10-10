@@ -19,6 +19,7 @@ import ActionsTable from '@/components/actions/ActionsTable';
 import FormularioActionButton from '@/components/requests/FormularioActionButton';
 import FormularioViewLink from '@/components/requests/FormularioViewLink';
 import RequestCustos from '@/components/custos/RequestCustos';
+import TokenSequencialDisplay from '@/components/requests/TokenSequencialDisplay';
 
 export default function RequestPage({ role }: { role: Role }) {
   const router = useRouter();
@@ -89,10 +90,12 @@ export default function RequestPage({ role }: { role: Role }) {
           />
         )}
 
-        {/* Link para visualizar formulários médicos (aparece se houver formulários) */}
-        {request?.formulariosRegistrados && request.formulariosRegistrados.length > 0 && (
+        {/* Link para visualizar formulários médicos (aparece se houver formulários) */}        {request?.formulariosRegistrados && request.formulariosRegistrados.length > 0 && (
           <FormularioViewLink requestId={requestId as string} />
         )}
+
+        {/* Exibir Token Sequencial se existir */}
+        <TokenSequencialDisplay token={request?.tokenSequencial} />
 
         <Accordion.Root startOpen>
           <Accordion.Header>

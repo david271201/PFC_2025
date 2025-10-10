@@ -38,12 +38,13 @@ const normalizeString = (text: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9 ]/g, "");
 
-    
-    const requestFormSchema = z.object({
+      const requestFormSchema = z.object({
       precCp: z.string(),
       cpf: z.string(),
       name: z.string(),
       rank: z.string(),
+      idade: z.coerce.number().optional(),
+      sexo: z.string().optional(),
       isDependent: z.string().transform(transformToBoolean).or(z.boolean()),
       cbhpmCode: z.object({
         id: z.string(),
@@ -98,9 +99,10 @@ const normalizeString = (text: string) =>
       request
         ? {
             resolver: zodResolver(requestFormSchema),
-            disabled: isInputDisabled,
-            defaultValues: {
+            disabled: isInputDisabled,            defaultValues: {
               ...request.pacient,
+              idade: request.pacient.idade || undefined,
+              sexo: request.pacient.sexo || undefined,
               cbhpmCode: cbhpmInfo.find(
                 (cbhpm) => cbhpm.id === request.cbhpmCode
               ),
@@ -189,13 +191,13 @@ const normalizeString = (text: string) =>
     await new Promise((resolve) => {
       setTimeout(resolve, 1000);
     });
-    setIsSearchingPacient(false);
-
-    if (!pacient) return;
+    setIsSearchingPacient(false);    if (!pacient) return;
 
     setValue("precCp", pacient.precCp);
     setValue("name", pacient.name);
     setValue("rank", pacient.rank);
+    setValue("idade", pacient.idade);
+    setValue("sexo", pacient.sexo);
     setValue("isDependent", pacient.isDependent);
   };
 
@@ -315,8 +317,7 @@ const normalizeString = (text: string) =>
           required: true,
           disabled: isSearchingPacient,
         })}
-      />
-      <Select
+      />      <Select
         label="Dependente?"
         options={[
           { label: "Não", value: "false" },
@@ -328,7 +329,28 @@ const normalizeString = (text: string) =>
           disabled: isSearchingPacient,
         })}
       />
-      <div className="col-span-3 row-start-3 flex flex-col gap-1">
+      <Input
+        label="Idade"
+        type="number"
+        divClassname="col-span-1 row-start-3"
+        {...register("idade", {
+          disabled: isSearchingPacient,
+          valueAsNumber: true,
+        })}
+      />
+      <Select
+        label="Sexo"
+        options={[
+          { label: "Selecione", value: "" },
+          { label: "Masculino", value: "Masculino" },
+          { label: "Feminino", value: "Feminino" },
+        ]}
+        divClassname="col-span-2 row-start-3"
+        {...register("sexo", {
+          disabled: isSearchingPacient,
+        })}
+      />
+      <div className="col-span-3 row-start-4 flex flex-col gap-1">
         <span className="font-semibold text-grafite">Código CBHPM</span>
         <Controller
           name="cbhpmCode"
@@ -363,7 +385,7 @@ const normalizeString = (text: string) =>
           { label: "Não", value: "false" },
           { label: "Sim", value: "true" },
         ]}
-        divClassname="row-start-3 whitespace-nowrap"
+        divClassname="row-start-4 whitespace-nowrap"
         {...register("needsCompanion", {
           onChange: (e) => handleSelectChange(e),
         })}
@@ -373,10 +395,9 @@ const normalizeString = (text: string) =>
         control={control}
         rules={{ required: true }}
         defaultValue={0}
-        render={({ field }) => (
-          <CurrencyInput
+        render={({ field }) => (          <CurrencyInput
             label="Custo OPME estimado"
-            className="col-span-2 row-start-4"
+            className="col-span-2 row-start-5"
             value={field.value || 0}
             onChange={field.onChange}
             disabled={isInputDisabled}
@@ -390,18 +411,16 @@ const normalizeString = (text: string) =>
         rules={{ required: true }}
         defaultValue={0}
         render={({ field }) => (
-          <CurrencyInput
-            label="Custo OCS/PSA"
-            className="col-span-2 row-start-4"
+          <CurrencyInput            label="Custo OCS/PSA"
+            className="col-span-2 row-start-5"
             value={field.value || 0}
             onChange={field.onChange}
             disabled={isInputDisabled}
             // Não usamos mais inCents pois armazenamos valores decimais diretamente
           />
         )}
-      />
-      {/* Card for Total Cost */}
-      <div className="col-span-2 row-start-5">
+      />      {/* Card for Total Cost */}
+      <div className="col-span-2 row-start-6">
         <div className="p-4 border rounded-md shadow-sm bg-white">
           <span className="font-semibold text-grafite">Custo Total</span>
           <p className="text-lg font-bold text-verde">
@@ -411,7 +430,7 @@ const normalizeString = (text: string) =>
       </div>
 
       {!router.pathname.includes("recebidas") && (
-        <div className="col-span-2 row-start-5 flex flex-col gap-1">
+        <div className="col-span-2 row-start-6 flex flex-col gap-1">
           <span className="font-semibold text-grafite">OMS de referência</span>
           <Controller
             name="requestedOrganizations"
@@ -431,7 +450,7 @@ const normalizeString = (text: string) =>
       )}
       {!request && (
         <>
-          <div className="row-start-6 flex flex-col items-start gap-1">
+          <div className="row-start-7 flex flex-col items-start gap-1">
             <span className="font-medium text-grafite">Anexos</span>
             <div className="flex items-center gap-2">
               {selectedFiles.map((file) => (
@@ -469,7 +488,7 @@ const normalizeString = (text: string) =>
               </div>
             </div>
           </div>
-          <Button type="submit" className="row-start-7">
+          <Button type="submit" className="row-start-8">
             Enviar
           </Button>
         </>
@@ -522,7 +541,7 @@ const normalizeString = (text: string) =>
             });
           }
         })}
-        className="row-start-7" >
+        className="row-start-8" >
           Corrigir
         </Button>
       )}

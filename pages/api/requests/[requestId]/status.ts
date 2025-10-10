@@ -13,6 +13,7 @@ import formidable from "formidable";
 import { NextApiRequest, NextApiResponse } from "next";
 import path from "path";
 import fs from "fs";
+import { generateSequentialToken } from "@/utils/tokenGenerator";
 
 type CreateRequestResponseInput = {
   requestId: string;
@@ -505,15 +506,37 @@ export default async function handle(
       } else {
         console.log('Solicitação não possui organizações de destino definidas (requestedOrganizationIds vazio)');
       }
-    }
-
-    // Para CHEFE_SECAO_REGIONAL_3, sempre direcionar para AGUARDANDO_OPERADOR_FUSEX_REALIZACAO (RM iguais)
+    }    // Para CHEFE_SECAO_REGIONAL_3, sempre direcionar para AGUARDANDO_OPERADOR_FUSEX_REALIZACAO (RM iguais)
     if (request.status === RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3) {
       // Definimos o próximo status diretamente para operador FUSEX (realização)
       nextStatus = RequestStatus.AGUARDANDO_OPERADOR_FUSEX_REALIZACAO;
-    }
+    }    await prisma.$transaction(async (tx) => {
+      // Gerar token sequencial em dois cenários:
+      // 1. RM IGUAIS: CHEFE_SECAO_REGIONAL_3 → OPERADOR_FUSEX_REALIZACAO
+      // 2. RM DIFERENTES: SUBDIRETOR_SAUDE_2 → CHEFE_DIV_MEDICINA_4 (aprovação final DSAU)
+      let tokenSequencial: string | undefined;
+      
+      if (
+        (request.status === RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3 &&
+         nextStatus === RequestStatus.AGUARDANDO_OPERADOR_FUSEX_REALIZACAO) ||
+        (request.status === RequestStatus.AGUARDANDO_SUBDIRETOR_SAUDE_2 &&
+         nextStatus === RequestStatus.AGUARDANDO_CHEFE_DIV_MEDICINA_4)
+      ) {
+        // Busca a região da organização remetente para gerar o token
+        const senderOrg = await tx.organization.findUnique({
+          where: { id: request.senderId },
+          include: { region: true }
+        });
 
-    await prisma.$transaction(async (tx) => {
+        if (senderOrg?.region) {
+          tokenSequencial = await generateSequentialToken(tx, senderOrg.region.id);
+          const cenario = request.status === RequestStatus.AGUARDANDO_CHEFE_SECAO_REGIONAL_3 
+            ? "RM iguais - Chefe Seção Regional" 
+            : "RM diferentes - Subdiretor Saúde";
+          console.log(`🎫 Token sequencial gerado: ${tokenSequencial} para solicitação ${requestId} (${cenario})`);
+        }
+      }
+
       // Criando as responses vazias uma vez que mandou para as solicitadas
       if (
         request.status === RequestStatus.AGUARDANDO_HOMOLOGADOR_SOLICITANTE_1
@@ -551,6 +574,7 @@ export default async function handle(
         },
         data: {
           status: nextStatus as RequestStatus,
+          tokenSequencial: tokenSequencial, // Adiciona o token se foi gerado
         },
       });
         // Se estamos atualizando para um status de AGUARDANDO_CHEFE_DIV_MEDICINA_4, atualizar TODAS

@@ -28,6 +28,8 @@ const pacienteSchema = z.object({
     (rank) => PATENTES_MILITARES.includes(rank as any),
     'Patente militar inválida'
   ),
+  idade: z.number().min(0, 'Idade deve ser um número positivo').max(120, 'Idade deve ser menor que 120').optional(),
+  sexo: z.enum(['Masculino', 'Feminino']).optional(),
 });
 
 export default async function handler(

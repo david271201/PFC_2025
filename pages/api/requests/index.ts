@@ -181,8 +181,7 @@ export default async function handle(
     }
 
     // Adicionar campos para depuração em ambientes de desenvolvimento
-    const isDevEnv = process.env.NODE_ENV === 'development';
-      const requests = await prisma.request.findMany({
+    const isDevEnv = process.env.NODE_ENV === 'development';      const requests = await prisma.request.findMany({
       where: whereClause,
       select: {
         id: true,
@@ -191,6 +190,7 @@ export default async function handle(
         senderId: true,
         requestedOrganizationIds: true,
         updatedAt: true,
+        tokenSequencial: true, // Token sequencial visível para todos os usuários
         sender: {
           select: {
             id: true,
@@ -260,10 +260,14 @@ export default async function handle(
         return { ...acc, [key]: value[0] };
       },
       {} as any,
-    );
-
-    const {
+    );    const {
       cpf,
+      precCp,
+      name,
+      rank,
+      idade,
+      sexo,
+      isDependent,
       needsCompanion,
       cbhpmCode,
       opmeCost,
@@ -272,6 +276,38 @@ export default async function handle(
     } = formattedFields;
 
     const request = await prisma.$transaction(async (tx) => {
+      // Verificar se o paciente existe, se não existir, criar
+      const existingPacient = await tx.pacient.findUnique({
+        where: { cpf },
+      });
+
+      if (!existingPacient) {
+        await tx.pacient.create({
+          data: {
+            cpf,
+            precCp,
+            name,
+            rank,
+            idade: idade ? parseInt(idade) : null,
+            sexo: sexo || null,
+            isDependent,
+          },
+        });
+      } else {
+        // Atualizar paciente existente com novos dados se fornecidos
+        await tx.pacient.update({
+          where: { cpf },
+          data: {
+            ...(precCp && { precCp }),
+            ...(name && { name }),
+            ...(rank && { rank }),
+            ...(idade && { idade: parseInt(idade) }),
+            ...(sexo && { sexo }),
+            ...(typeof isDependent === 'boolean' && { isDependent }),
+          },
+        });
+      }
+
       const createdRequest = await tx.request.create({
         data: {
           needsCompanion,

@@ -145,6 +145,8 @@ model Pacient {
   name        String
   rank        String
   isDependent Boolean
+  idade       Int?      // Idade do paciente
+  sexo        String?   // Sexo do paciente (M/F)
   requests    Request[]
 }
 
@@ -170,6 +172,7 @@ model Request {
   custos                  Custo[]
   valorPassagem           Float?
   tipoTransporte          TipoTransporte?
+  tokenSequencial         String?           // Token sequencial gerado na aprovação pelo chefe da seção regional
 }
 
 model RequestResponse {
@@ -272,4 +275,15 @@ model Custo {
   updatedAt   DateTime @updatedAt
 
   @@index([requestId])
+}
+
+model TokenSequence {
+  id            String   @id @default(uuid())
+  regionId      String   // Região militar para controle de sequência por região
+  year          Int      // Ano para reiniciar a sequência anualmente
+  lastSequence  Int      @default(0) // Último número sequencial usado
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([regionId, year]) // Garante uma sequência por região por ano
 }
