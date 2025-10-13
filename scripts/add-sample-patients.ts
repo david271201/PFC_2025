@@ -7,8 +7,8 @@ const samplePatients = [
     cpf: '11111111111',
     precCp: 'TC001',
     name: 'Ana Maria Santos',
-    rank: 'Coronel',
-    idade: 48,
+    rank: 'Primeiro Sargento',
+    dataNascimento: new Date('1975-03-15'),
     sexo: 'Feminino',
     isDependent: false
   },
@@ -16,8 +16,8 @@ const samplePatients = [
     cpf: '22222222222',
     precCp: 'MAJ002',
     name: 'Carlos Eduardo Lima',
-    rank: 'Major',
-    idade: 38,
+    rank: 'Segundo Sargento',
+    dataNascimento: new Date('1985-07-22'),
     sexo: 'Masculino',
     isDependent: false
   },
@@ -25,8 +25,8 @@ const samplePatients = [
     cpf: '33333333333',
     precCp: 'CAP003',
     name: 'Mariana Silva Rodrigues',
-    rank: 'Capitão',
-    idade: 33,
+    rank: 'Cabo',
+    dataNascimento: new Date('1990-11-08'),
     sexo: 'Feminino',
     isDependent: false
   },
@@ -35,7 +35,7 @@ const samplePatients = [
     precCp: 'DEP001',
     name: 'João Pedro Santos',
     rank: 'Dependente',
-    idade: 12,
+    dataNascimento: new Date('2011-05-12'),
     sexo: 'Masculino',
     isDependent: true
   },
@@ -43,8 +43,8 @@ const samplePatients = [
     cpf: '55555555555',
     precCp: 'PT001',
     name: 'Roberto Almeida Costa',
-    rank: 'Primeiro Tenente',
-    idade: 28,
+    rank: 'Soldado',
+    dataNascimento: new Date('1995-09-18'),
     sexo: 'Masculino',
     isDependent: false
   }
@@ -71,7 +71,8 @@ async function addSamplePatients() {
           data: patient
         });
 
-        console.log(`✅ Criado: ${patient.name} (${patient.rank}) - ${patient.idade} anos, ${patient.sexo}`);
+        const age = new Date().getFullYear() - patient.dataNascimento.getFullYear();
+        console.log(`✅ Criado: ${patient.name} (${patient.rank}) - ${age} anos, ${patient.sexo}`);
       } catch (error) {
         console.error(`❌ Erro ao criar ${patient.name}:`, error);
       }

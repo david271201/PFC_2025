@@ -282,14 +282,13 @@ export default async function handle(
       });
 
       if (!existingPacient) {
-        await tx.pacient.create({
-          data: {
+        await tx.pacient.create({        data: {
             cpf,
             precCp,
             name,
             rank,
-            idade: idade ? parseInt(idade) : null,
-            sexo: sexo || null,
+            dataNascimento: new Date(), // Valor padrão temporário - deve ser fornecido pelo formulário
+            sexo: sexo || 'Masculino',
             isDependent,
           },
         });

@@ -140,14 +140,14 @@ model Region {
 }
 
 model Pacient {
-  cpf         String    @id
-  precCp      String    @unique
-  name        String
-  rank        String
-  isDependent Boolean
-  idade       Int?      // Idade do paciente
-  sexo        String?   // Sexo do paciente (M/F)
-  requests    Request[]
+  cpf            String    @id
+  precCp         String    @unique
+  name           String
+  rank           String
+  isDependent    Boolean
+  dataNascimento DateTime  // Data de nascimento do paciente
+  sexo           String    // Sexo do paciente (Masculino/Feminino)
+  requests       Request[]
 }
 
 model Request {

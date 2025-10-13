@@ -36,14 +36,12 @@ const normalizeString = (text: string) =>
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9 ]/g, "");
-
-      const requestFormSchema = z.object({
+    .replace(/[^a-zA-Z0-9 ]/g, "");      const requestFormSchema = z.object({
       precCp: z.string(),
       cpf: z.string(),
       name: z.string(),
       rank: z.string(),
-      idade: z.coerce.number().optional(),
+      dataNascimento: z.string().optional(),
       sexo: z.string().optional(),
       isDependent: z.string().transform(transformToBoolean).or(z.boolean()),
       cbhpmCode: z.object({
@@ -101,7 +99,7 @@ const normalizeString = (text: string) =>
             resolver: zodResolver(requestFormSchema),
             disabled: isInputDisabled,            defaultValues: {
               ...request.pacient,
-              idade: request.pacient.idade || undefined,
+              dataNascimento: request.pacient.dataNascimento ? new Date(request.pacient.dataNascimento).toISOString().split('T')[0] : undefined,
               sexo: request.pacient.sexo || undefined,
               cbhpmCode: cbhpmInfo.find(
                 (cbhpm) => cbhpm.id === request.cbhpmCode
@@ -194,9 +192,8 @@ const normalizeString = (text: string) =>
     setIsSearchingPacient(false);    if (!pacient) return;
 
     setValue("precCp", pacient.precCp);
-    setValue("name", pacient.name);
-    setValue("rank", pacient.rank);
-    setValue("idade", pacient.idade);
+    setValue("name", pacient.name);    setValue("rank", pacient.rank);
+    setValue("dataNascimento", pacient.dataNascimento ? new Date(pacient.dataNascimento).toISOString().split('T')[0] : '');
     setValue("sexo", pacient.sexo);
     setValue("isDependent", pacient.isDependent);
   };
@@ -328,14 +325,12 @@ const normalizeString = (text: string) =>
           onChange: (e) => handleSelectChange(e),
           disabled: isSearchingPacient,
         })}
-      />
-      <Input
-        label="Idade"
-        type="number"
+      />      <Input
+        label="Data de Nascimento"
+        type="date"
         divClassname="col-span-1 row-start-3"
-        {...register("idade", {
+        {...register("dataNascimento", {
           disabled: isSearchingPacient,
-          valueAsNumber: true,
         })}
       />
       <Select

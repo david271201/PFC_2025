@@ -7,18 +7,11 @@ import { z } from 'zod';
 
 // Patentes militares válidas (inclui variações para compatibilidade)
 const VALID_MILITARY_RANKS = [
-  '2º Tenente',
-  'Segundo Tenente',
-  '1º Tenente', 
-  'Primeiro Tenente',
-  'Capitão',
-  'Major',
-  'Tenente-Coronel',
-  'Coronel',
-  'General de Brigada',
-  'General de Divisão',
-  'General de Exército',
-  'Marechal',
+  'Soldado',
+  'Cabo',
+  'Terceiro Sargento',
+  'Segundo Sargento',
+  'Primeiro Sargento',
   'Dependente'
 ] as const;
 
@@ -32,6 +25,14 @@ const pacientSchema = z.object({
     'Posto/Graduação inválido'
   ),
   isDependent: z.boolean().default(false),
+  dataNascimento: z.string().refine(
+    (date) => !isNaN(Date.parse(date)),
+    'Data de nascimento deve ser uma data válida'
+  ).transform((date) => new Date(date)),
+  sexo: z.enum(['Masculino', 'Feminino'], {
+    required_error: 'Sexo é obrigatório',
+    invalid_type_error: 'Sexo deve ser Masculino ou Feminino'
+  }),
 });
 
 export default async function handler(

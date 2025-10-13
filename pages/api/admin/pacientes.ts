@@ -7,16 +7,12 @@ import { z } from 'zod';
 
 // Patentes militares conforme especificação
 const PATENTES_MILITARES = [
-  'Marechal',
-  'General-de-Exército',
-  'General-de-Divisão',
-  'General-de-Brigada',
-  'Coronel',
-  'Tenente-Coronel',
-  'Major',
-  'Capitão',
-  'Primeiro Tenente',
-  'Segundo Tenente'
+  'Soldado',
+  'Cabo',
+  'Terceiro Sargento',
+  'Segundo Sargento',
+  'Primeiro Sargento',
+  'Dependente'
 ] as const;
 
 // Schema de validação
@@ -28,8 +24,14 @@ const pacienteSchema = z.object({
     (rank) => PATENTES_MILITARES.includes(rank as any),
     'Patente militar inválida'
   ),
-  idade: z.number().min(0, 'Idade deve ser um número positivo').max(120, 'Idade deve ser menor que 120').optional(),
-  sexo: z.enum(['Masculino', 'Feminino']).optional(),
+  dataNascimento: z.string().refine(
+    (date) => !isNaN(Date.parse(date)),
+    'Data de nascimento deve ser uma data válida'
+  ).transform((date) => new Date(date)),
+  sexo: z.enum(['Masculino', 'Feminino'], {
+    required_error: 'Sexo é obrigatório',
+    invalid_type_error: 'Sexo deve ser Masculino ou Feminino'
+  }),
 });
 
 export default async function handler(

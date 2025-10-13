@@ -7,16 +7,12 @@ import { UserType } from '../../src/permissions/utils';
 
 // Patentes militares conforme especificação
 const PATENTES_MILITARES = [
-  'Marechal',
-  'General-de-Exército',
-  'General-de-Divisão',
-  'General-de-Brigada',
-  'Coronel',
-  'Tenente-Coronel',
-  'Major',
-  'Capitão',
-  'Primeiro Tenente',
-  'Segundo Tenente'
+  'Soldado',
+  'Cabo',
+  'Terceiro Sargento',
+  'Segundo Sargento',
+  'Primeiro Sargento',
+  'Dependente'
 ] as const;
 
 // Tipos
@@ -26,6 +22,8 @@ interface Paciente {
   name: string;
   rank: string;
   isDependent: boolean;
+  dataNascimento: string;
+  sexo: string;
   _count: {
     requests: number;
   };
@@ -66,7 +64,9 @@ const PacientesPage = () => {
     cpf: '',
     precCp: '',
     name: '',
-    rank: 'Segundo Tenente'
+    rank: 'Soldado',
+    dataNascimento: '',
+    sexo: 'Masculino'
   });
 
   // Verificar autenticação e permissão
@@ -144,6 +144,12 @@ const PacientesPage = () => {
     if (!formData.rank.trim()) {
       throw new Error('Patente é obrigatória');
     }
+    if (!formData.dataNascimento) {
+      throw new Error('Data de nascimento é obrigatória');
+    }
+    if (!formData.sexo) {
+      throw new Error('Sexo é obrigatório');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -178,7 +184,9 @@ const PacientesPage = () => {
         cpf: '',
         precCp: '',
         name: '',
-        rank: 'Segundo Tenente'
+        rank: 'Soldado',
+        dataNascimento: '',
+        sexo: 'Masculino'
       });
       setEditingPaciente(null);
       setShowModal(false);
@@ -201,7 +209,9 @@ const PacientesPage = () => {
       cpf: paciente.cpf,
       precCp: paciente.precCp,
       name: paciente.name,
-      rank: paciente.rank
+      rank: paciente.rank,
+      dataNascimento: paciente.dataNascimento.split('T')[0], // Formato YYYY-MM-DD para input date
+      sexo: paciente.sexo
     });
     setShowModal(true);
   };
@@ -235,7 +245,9 @@ const PacientesPage = () => {
       cpf: '',
       precCp: '',
       name: '',
-      rank: 'Segundo Tenente'
+      rank: 'Soldado',
+      dataNascimento: '',
+      sexo: 'Masculino'
     });
     setShowModal(true);
   };
@@ -269,6 +281,7 @@ const PacientesPage = () => {
   }
 
   return (
+    <Layout>
       <div className="container mx-auto p-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Gerenciamento de Pacientes</h1>
         
@@ -337,6 +350,12 @@ const PacientesPage = () => {
                       Patente
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Data Nascimento
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Sexo
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Solicitações
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -365,6 +384,16 @@ const PacientesPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
                           {paciente.rank}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {new Date(paciente.dataNascimento).toLocaleDateString('pt-BR')}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {paciente.sexo}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -508,6 +537,36 @@ const PacientesPage = () => {
                   </select>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Data de Nascimento *
+                  </label>
+                  <input
+                    type="date"
+                    name="dataNascimento"
+                    value={formData.dataNascimento}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sexo *
+                  </label>
+                  <select
+                    name="sexo"
+                    value={formData.sexo}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="Masculino">Masculino</option>
+                    <option value="Feminino">Feminino</option>
+                  </select>
+                </div>
+
                 {error && (
                   <div className="text-red-600 text-sm">
                     {error}
@@ -535,6 +594,7 @@ const PacientesPage = () => {
           </div>
         )}
       </div>
+    </Layout>
   );
 };
 

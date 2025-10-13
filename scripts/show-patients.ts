@@ -11,7 +11,7 @@ async function showPatients() {
         cpf: true,
         name: true,
         rank: true,
-        idade: true,
+        dataNascimento: true,
         sexo: true,
         isDependent: true
       },
@@ -24,7 +24,8 @@ async function showPatients() {
       console.log(`${index + 1}. ${patient.name}`);
       console.log(`   CPF: ${patient.cpf}`);
       console.log(`   Patente: ${patient.rank}`);
-      console.log(`   Idade: ${patient.idade} anos`);
+      const age = new Date().getFullYear() - patient.dataNascimento.getFullYear();
+      console.log(`   Idade: ${age} anos`);
       console.log(`   Sexo: ${patient.sexo}`);
       console.log(`   Dependente: ${patient.isDependent ? 'Sim' : 'Não'}`);
       console.log('');
