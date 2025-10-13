@@ -3,7 +3,7 @@ import { checkPermission, UserType, statusTransitions } from '@/permissions/util
 import { isStatusForRole } from '@/utils';
 import { auth } from '../../../auth';
 import prisma from '../../../prisma/prismaClient';
-import { ActionType, RequestStatus } from '@prisma/client';
+import { ActionType, RequestStatus, Role } from '@prisma/client';
 import formidable from 'formidable';
 import { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
@@ -92,12 +92,16 @@ export default async function handle(
                       .map(([status]) => status as RequestStatus)
               }
             }
-          },
-          // Incluir solicitações que necessitam correção nas enviadas para o OPERADOR_FUSEX
-          ...(role === 'OPERADOR_FUSEX' ? [{
+          },          // Incluir solicitações que necessitam correção nas enviadas para quem ENVIOU para correção
+          {
             status: RequestStatus.NECESSITA_CORRECAO,
-            senderId: dbUser.organizationId
-          }] : [])
+            actions: {
+              some: {
+                userId: userId,
+                action: ActionType.REPROVACAO
+              }
+            }
+          }
         ]
       };
     } else {
@@ -157,23 +161,51 @@ export default async function handle(
         debugRequests.forEach(req => {
           console.log(`- Request ${req.id}, status: ${req.status}, respostas para org ${dbUser.organizationId}:`, 
             req.requestResponses.map(r => `${r.id} (selected: ${r.selected}, status: ${r.status})`));
-        });
-      } else {
+        });      } else {
         // Para outros papéis, usamos a lógica original
-        whereClause = {
-          ...whereClause,
-          status: {
-            in: Object.entries(statusTransitions)
-                  .filter(([_, transition]) => transition?.requiredRole === role)
-                  .map(([status]) => status as RequestStatus)
-          },
-          // Excluir NECESSITA_CORRECAO das pendentes para o OPERADOR_FUSEX
-          ...(role === 'OPERADOR_FUSEX' ? {
-            NOT: {
-              status: RequestStatus.NECESSITA_CORRECAO
+        const allowedStatuses = Object.entries(statusTransitions)
+              .filter(([_, transition]) => transition?.requiredRole === role)
+              .map(([status]) => status as RequestStatus);        // Para solicitações pendentes, incluir NECESSITA_CORRECAO para todos os usuários que podem fazer correções
+        // EXCETO quem enviou para correção (que deve ver apenas nas enviadas)
+        const correctableRoles = [Role.CHEFE_FUSEX, Role.AUDITOR, Role.CHEFE_AUDITORIA, Role.ESPECIALISTA, 
+                                  Role.CHEFE_DIV_MEDICINA, Role.COTADOR, Role.HOMOLOGADOR, Role.CHEM, 
+                                  Role.CHEFE_SECAO_REGIONAL, Role.OPERADOR_SECAO_REGIONAL, Role.DRAS, 
+                                  Role.SUBDIRETOR_SAUDE, Role.SUPERADMIN, Role.OPERADOR_FUSEX] as Role[];
+        
+        const includeCorrections = role && correctableRoles.includes(role);
+
+        if (includeCorrections) {
+          whereClause = {
+            ...whereClause,
+            OR: [
+              // Status normais do fluxo
+              {
+                status: {
+                  in: allowedStatuses
+                }
+              },
+              // NECESSITA_CORRECAO, mas APENAS se o usuário atual NÃO foi quem enviou para correção
+              {
+                status: RequestStatus.NECESSITA_CORRECAO,
+                NOT: {
+                  actions: {
+                    some: {
+                      userId: userId,
+                      action: ActionType.REPROVACAO
+                    }
+                  }
+                }
+              }
+            ]
+          };
+        } else {
+          whereClause = {
+            ...whereClause,
+            status: {
+              in: allowedStatuses
             }
-          } : {})
-        };        // Log para CHEFE_DIV_MEDICINA para debug
+          };
+        }// Log para CHEFE_DIV_MEDICINA para debug
         if (role === 'CHEFE_DIV_MEDICINA') {
           console.log("Usando lógica padrão para CHEFE_DIV_MEDICINA - whereClause:", JSON.stringify(whereClause, null, 2));
         }

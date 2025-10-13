@@ -8,8 +8,6 @@
 */
 -- AlterTable: Primeiro adiciona as colunas como opcionais
 ALTER TABLE "Pacient" ADD COLUMN "dataNascimento" TIMESTAMP(3);
-
--- Atualiza registros existentes com valores padrão baseados na idade (se existir)
 UPDATE "Pacient" SET "dataNascimento" = CURRENT_DATE - INTERVAL '30 years' WHERE "dataNascimento" IS NULL;
 UPDATE "Pacient" SET "sexo" = 'Masculino' WHERE "sexo" IS NULL;
 
