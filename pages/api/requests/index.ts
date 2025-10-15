@@ -184,9 +184,19 @@ export default async function handle(
                   in: allowedStatuses
                 }
               },
-              // NECESSITA_CORRECAO, mas APENAS se o usuário atual NÃO foi quem enviou para correção
+              // NECESSITA_CORRECAO: aparecer para quem pode corrigir, EXCETO quem enviou para correção
               {
                 status: RequestStatus.NECESSITA_CORRECAO,
+                OR: [
+                  // Para o criador original da solicitação (pode corrigir)
+                  {
+                    senderId: dbUser.organizationId
+                  },
+                  // Para outros usuários do fluxo que podem corrigir
+                  {
+                    senderId: { not: dbUser.organizationId }
+                  }
+                ],
                 NOT: {
                   actions: {
                     some: {

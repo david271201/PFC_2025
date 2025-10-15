@@ -7,6 +7,7 @@ import CancelButton from '../button/CancelButton';
 function TableRow({
   request,
   isResponse = false,
+  queryParams,
 }: {
   request: {
     id: string;
@@ -18,6 +19,7 @@ function TableRow({
     tokenSequencial?: string;
   };
   isResponse?: boolean;
+  queryParams?: Record<string, string>;
 }) {
   const { data: session } = useSession();
   const role = session?.user ? (session.user as UserType).role : undefined;
@@ -35,10 +37,23 @@ function TableRow({
     return 'text-black';
   };
 
+  const buildUrl = () => {
+    const baseUrl = isResponse ? `/solicitacoes/recebidas/${request.id}` : `/solicitacoes/${request.id}`;
+    if (queryParams && Object.keys(queryParams).length > 0) {
+      const params = new URLSearchParams(queryParams).toString();
+      return `${baseUrl}?${params}`;
+    }
+    return baseUrl;
+  };
+
+  const handleRowClick = () => {
+    router.push(buildUrl());
+  };
+
   return (
     <tr className="hover:bg-gray-100">
       <td className="whitespace-nowrap border-x-0 border-t-0 p-4 px-6 align-middle text-xs flex items-center gap-2">
-        <div onClick={() => router.push(isResponse ? `/solicitacoes/recebidas/${request.id}` : `/solicitacoes/${request.id}`)} 
+        <div onClick={handleRowClick} 
              style={{ cursor: 'pointer' }}>
           {request.status.replaceAll('_', ' ').replace(/\d/g, '')}
         </div>
@@ -46,16 +61,16 @@ function TableRow({
           <CancelButton requestId={request.id} />
         )}
       </td>
-      <td onClick={() => router.push(isResponse ? `/solicitacoes/recebidas/${request.id}` : `/solicitacoes/${request.id}`)}
+      <td onClick={handleRowClick}
           style={{ cursor: 'pointer' }}
           className="whitespace-nowrap border-x-0 border-t-0 p-4 px-6 align-middle text-xs">
         {request.pacientCpf}
-      </td>      <td onClick={() => router.push(isResponse ? `/solicitacoes/recebidas/${request.id}` : `/solicitacoes/${request.id}`)}
+      </td>      <td onClick={handleRowClick}
           style={{ cursor: 'pointer' }}
           className="whitespace-nowrap border-x-0 border-t-0 p-4 px-6 align-middle text-xs">
         {request.sender.name}
       </td>
-      <td onClick={() => router.push(isResponse ? `/solicitacoes/recebidas/${request.id}` : `/solicitacoes/${request.id}`)}
+      <td onClick={handleRowClick}
           style={{ cursor: 'pointer' }}
           className="whitespace-nowrap border-x-0 border-t-0 p-4 px-6 align-middle text-xs">
         {request.tokenSequencial ? (
@@ -66,14 +81,14 @@ function TableRow({
           <span className="text-gray-400 text-xs">-</span>
         )}
       </td>
-      <td onClick={() => router.push(isResponse ? `/solicitacoes/recebidas/${request.id}` : `/solicitacoes/${request.id}`)}
+      <td onClick={handleRowClick}
           style={{ cursor: 'pointer' }}
           className="whitespace-nowrap border-x-0 border-t-0 p-4 px-6 align-middle text-xs">
         <span className={getColorForDays(daysSinceCreation)}>
           {daysSinceCreation} dias
         </span>
       </td>
-      <td onClick={() => router.push(isResponse ? `/solicitacoes/recebidas/${request.id}` : `/solicitacoes/${request.id}`)}
+      <td onClick={handleRowClick}
           style={{ cursor: 'pointer' }}
           className="whitespace-nowrap border-x-0 border-t-0 p-4 px-6 align-middle text-xs">
         {new Date(request.updatedAt).toLocaleDateString('pt-BR', {

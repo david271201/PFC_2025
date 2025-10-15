@@ -24,6 +24,7 @@ import TokenSequencialDisplay from '@/components/requests/TokenSequencialDisplay
 export default function RequestPage({ role }: { role: Role }) {
   const router = useRouter();
   const { requestId } = router.query;
+  const { type } = router.query;
 
   const { data: request, isLoading } = useSWR<TRequestInfoWithResponses>(
     `/api/requests/${requestId}`,
@@ -142,6 +143,7 @@ export default function RequestPage({ role }: { role: Role }) {
             status={request?.status}
             responses={responses}
             userRole={role}
+            showResendButton={type !== 'sent'}
           />
         )}
 

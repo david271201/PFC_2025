@@ -42,10 +42,12 @@ export default function RequestForm({
   status,
   responses,
   userRole,
+  showResendButton = true,
 }: {
   status: RequestStatus | undefined;
   responses: TRequestResponseWithReceiver[] | undefined;
   userRole: Role | undefined;
+  showResendButton?: boolean;
 }) {
   const { register, reset, setValue, handleSubmit, getValues, control } =
     useForm<OpinionFormDataType>({
@@ -301,9 +303,9 @@ export default function RequestForm({
             </div>
           </Card>
           <div className="mt-3 flex items-center gap-4">
-            <Button type="submit" className="max-w-40">
+            {showResendButton && <Button type="submit" className="max-w-40">
               Reenviar Solicitação Corrigida
-            </Button>
+            </Button>}
           </div>
         </>
       ) : (

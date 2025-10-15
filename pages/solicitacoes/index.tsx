@@ -89,7 +89,7 @@ export default function RequestsListPage({ role }: { role: Role }) {
             router.push(
               `/solicitacoes?${new URLSearchParams({
                 type: 'received',
-              })}`,
+              })}`, 
             )
           }
           className={`rounded p-1 text-sm ${
@@ -144,7 +144,7 @@ export default function RequestsListPage({ role }: { role: Role }) {
                     Solicitante
                   </th>
                   <th className="whitespace-nowrap border border-x-0 border-solid px-6 py-3 text-left align-middle text-xs font-bold uppercase">
-                    Token
+                    Número da solicitação
                   </th>
                   <th className="whitespace-nowrap border border-x-0 border-solid px-6 py-3 text-left align-middle text-xs font-bold uppercase">
                     Tempo
@@ -160,6 +160,7 @@ export default function RequestsListPage({ role }: { role: Role }) {
                     key={request.id}
                     request={request}
                     isResponse={request.isResponse}
+                    queryParams={{ type: type === 'sent' ? 'sent' : 'received' }}
                   />
                 ))}
               </tbody>
