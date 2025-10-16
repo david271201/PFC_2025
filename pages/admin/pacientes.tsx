@@ -7,6 +7,18 @@ import { UserType } from '../../src/permissions/utils';
 
 // Patentes militares conforme especificação
 const PATENTES_MILITARES = [
+  'Marechal',
+  'General de Exército',
+  'General de Divisão',
+  'General de Brigada',
+  'Coronel',
+  'Tenente-Coronel',
+  'Major',
+  'Capitão',
+  'Primeiro Tenente',
+  'Segundo Tenente',
+  'Aspirante-a-Oficial',
+  'Subtenente',
   'Soldado',
   'Cabo',
   'Terceiro Sargento',

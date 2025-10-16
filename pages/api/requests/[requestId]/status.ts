@@ -172,13 +172,26 @@ export default async function handle(
       observation,
       ticketCosts,
       cancelUnfinishedResponses,
-    } = formattedFields;
-
-    // Caso especial para cancelamento pelo OPERADOR_FUSEX
+    } = formattedFields;    // Caso especial para cancelamento pelo OPERADOR_FUSEX
     if (cancel && role === Role.OPERADOR_FUSEX) {
       // Verificamos apenas se o OPERADOR_FUSEX tem permissão de atualização
       if (!checkPermission(role, "requests:update")) {
         return res.status(403).json({ message: "Usuário não autorizado" });
+      }
+
+      // Verificar se a solicitação já está em um estado final
+      const finalStatuses = [
+        RequestStatus.CANCELADO,
+        RequestStatus.APROVADO,
+        RequestStatus.REPROVADO,
+        RequestStatus.REPROVADO_DSAU,
+        RequestStatus.FINALIZADO
+      ];
+
+      if (finalStatuses.includes(request.status)) {
+        return res.status(400).json({ 
+          message: "Não é possível cancelar uma solicitação que já foi finalizada" 
+        });
       }
 
       await prisma.$transaction(async (tx) => {

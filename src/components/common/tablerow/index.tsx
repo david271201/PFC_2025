@@ -49,6 +49,16 @@ function TableRow({
   const handleRowClick = () => {
     router.push(buildUrl());
   };
+  const canCancelRequest = (status: string) => {
+    const finalStatuses = [
+      'CANCELADO',
+      'APROVADO', 
+      'REPROVADO',
+      'REPROVADO_DSAU',
+      'FINALIZADO'
+    ];
+    return !finalStatuses.some(finalStatus => status.includes(finalStatus));
+  };
 
   return (
     <tr className="hover:bg-gray-100">
@@ -57,7 +67,7 @@ function TableRow({
              style={{ cursor: 'pointer' }}>
           {request.status.replaceAll('_', ' ').replace(/\d/g, '')}
         </div>
-        {role === Role.OPERADOR_FUSEX && !isResponse && (
+        {role === Role.OPERADOR_FUSEX && !isResponse && canCancelRequest(request.status) && (
           <CancelButton requestId={request.id} />
         )}
       </td>

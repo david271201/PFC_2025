@@ -20,16 +20,39 @@ export default function CancelButton({ requestId }: { requestId: string }) {
     });
 
     if (result.isConfirmed) {
-      const formData = new FormData();
-      formData.append('cancelation', 'true');
+      try {
+        const formData = new FormData();
+        formData.append('cancel', 'true');
 
-      const response = await fetch(`/api/requests/${requestId}/status`, {
-        method: 'PATCH',
-        body: formData,
-      });
+        const response = await fetch(`/api/requests/${requestId}/status`, {
+          method: 'PATCH',
+          body: formData,
+        });
 
-      if (response.ok) {
-        router.reload();
+        if (response.ok) {
+          await Swal.fire({
+            title: 'Sucesso!',
+            text: 'Solicitação cancelada com sucesso.',
+            icon: 'success',
+            confirmButtonColor: '#3085d6',
+          });
+          router.reload();
+        } else {
+          const errorData = await response.json();
+          await Swal.fire({
+            title: 'Erro!',
+            text: errorData.message || 'Erro ao cancelar a solicitação.',
+            icon: 'error',
+            confirmButtonColor: '#d33',
+          });
+        }
+      } catch (error) {
+        await Swal.fire({
+          title: 'Erro!',
+          text: 'Erro de conexão ao cancelar a solicitação.',
+          icon: 'error',
+          confirmButtonColor: '#d33',
+        });
       }
     }
   };
