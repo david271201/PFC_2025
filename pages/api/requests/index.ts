@@ -183,20 +183,24 @@ export default async function handle(
                 status: {
                   in: allowedStatuses
                 }
-              },
-              // NECESSITA_CORRECAO: aparecer para quem pode corrigir, EXCETO quem enviou para correção
+              },              // NECESSITA_CORRECAO: aparecer para quem pode corrigir, EXCETO quem enviou para correção
               {
                 status: RequestStatus.NECESSITA_CORRECAO,
-                OR: [
-                  // Para o criador original da solicitação (pode corrigir)
-                  {
-                    senderId: dbUser.organizationId
-                  },
-                  // Para outros usuários do fluxo que podem corrigir
-                  {
-                    senderId: { not: dbUser.organizationId }
-                  }
-                ],
+                OR: dbUser.organizationId 
+                  ? [
+                      // Para o criador original da solicitação (pode corrigir)
+                      {
+                        senderId: dbUser.organizationId
+                      },
+                      // Para outros usuários do fluxo que podem corrigir
+                      {
+                        senderId: { not: dbUser.organizationId }
+                      }
+                    ]
+                  : [
+                      // Para usuários sem organização (como CHEM regional), mostrar todas as correções
+                      {}
+                    ],
                 NOT: {
                   actions: {
                     some: {
@@ -215,7 +219,7 @@ export default async function handle(
               in: allowedStatuses
             }
           };
-        }// Log para CHEFE_DIV_MEDICINA para debug
+        }        // Log para CHEFE_DIV_MEDICINA para debug
         if (role === 'CHEFE_DIV_MEDICINA') {
           console.log("Usando lógica padrão para CHEFE_DIV_MEDICINA - whereClause:", JSON.stringify(whereClause, null, 2));
         }
@@ -259,16 +263,7 @@ export default async function handle(
       orderBy: {
         updatedAt: 'desc',
       },
-    });    // Log para ajudar na depuração
-    if (isDevEnv && role === 'CHEFE_DIV_MEDICINA') {
-      console.log(`Solicitações para CHEFE_DIV_MEDICINA (org ${dbUser.organizationId}):`);
-      requests.forEach(req => {
-        const selectedResponse = req.requestResponses?.[0];
-        console.log(`- Request ${req.id}, status: ${req.status}, org receptora: ${selectedResponse?.receiver?.name} (${selectedResponse?.receiverId})`);
-      });
-    }
-
-    return res.status(200).json(requests);
+    });    return res.status(200).json(requests);
   }
 
   if (req.method === 'POST') {
